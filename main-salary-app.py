@@ -38,17 +38,35 @@ st.markdown("""
     <style>
     /* メインエリアの背景 */
     .stApp { background-color: #E0F2F7 !important; }
-    
-    /* サイドバーの背景を黄色に、文字を黒に固定 */
-    [data-testid="stSidebar"] {
-        background-color: #FFEB3B !important; /* 明るい黄色 */
-    }
+/* --- サイドバー内の入力ボックス自体の設定 --- */
+/* 数値入力やテキスト入力の枠内を灰色に */
+[data-testid="stSidebar"] div[data-baseweb="input"] {
+    background-color: #D3D3D3 !important; /* 灰色 */
+    border: 1px solid #999999 !important; /* 枠線を少し濃くして視認性を向上 */
+}
 
-    /* メインエリアの文字色（日付・ラベル・マークダウン） */
-    h1, h2, h3, p, label, .stMarkdown, [data-testid="stWidgetLabel"] p { 
-        color: #000000 !important; 
-    }
+/* セレクトボックスの枠内を灰色に */
+[data-testid="stSidebar"] div[data-baseweb="select"] > div {
+    background-color: #D3D3D3 !important; /* 灰色 */
+    color: #000000 !important;
+}
 
+/* --- サイドバー内の文字色の固定 --- */
+/* 入力中の文字色 */
+[data-testid="stSidebar"] input {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important; /* iOS対策 */
+}
+
+/* 選択済み項目の文字色 */
+[data-testid="stSidebar"] div[data-baseweb="select"] span {
+    color: #000000 !important;
+}
+
+/* 入力欄のラベル（"基本時給(円)"など）の文字色 */
+[data-testid="stSidebar"] label p {
+    color: #000000 !important;
+}
 　　/* --- 入力フォーム内の文字を黒くする設定 --- */
     /* 入力フィールドのテキスト色 */
     input {
