@@ -32,13 +32,15 @@ sheet = init_spreadsheet()
 # --- 2. 画面基本設定 ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
-# --- 3. カスタムCSS（スマホ・ダークモード対応） ---
 # --- 3. カスタムCSS（スマホ・ダークモード対応・サイドバー黄色化） ---
 st.markdown("""
     <style>
     /* メインエリアの背景 */
     .stApp { background-color: #E0F2F7 !important; }
 /* --- サイドバー内の入力ボックス自体の設定 --- */
+
+/* 文字全般 */
+    h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
 
 /* サイドバーの背景 */
     [data-testid="stSidebar"] {
