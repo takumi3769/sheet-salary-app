@@ -51,7 +51,6 @@ st.markdown("""
     [data-testid="stSidebar"] div[data-baseweb="input"],
     [data-testid="stSidebar"] div[data-baseweb="base-input"] {
         background-color: #007BFF !important; /* はっきりした青 */
-        border: 2px solid #000000 !important;
     }
 
     /* 2. 入力されている文字を白に（最優先） */
