@@ -53,11 +53,11 @@ st.markdown("""
     border: 1px solid #999999 !important; /* 枠線を少し濃くして視認性を向上 */
 }
 
-/* セレクトボックスの枠内を灰色に */
-[data-testid="stSidebar"] div[data-baseweb="select"] > div {
-    background-color: #D3D3D3 !important; /* 灰色 */
-    color: #000000 !important;
-}
+/* サイドバーの数値入力欄（時給）の枠内を灰色にする */
+    [data-testid="stSidebar"] div[data-baseweb="input"] {
+        background-color: #D3D3D3 !important; /* 薄い灰色 */
+        border: 1px solid #000000 !important; /* 枠線を黒にして見やすく */
+    }
 
 /* --- サイドバー内の文字色の固定 --- */
 /* 入力中の文字色 */
