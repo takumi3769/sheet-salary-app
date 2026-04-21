@@ -37,6 +37,9 @@ st.markdown("""
     <style>
     /* メインエリア全体の背景 */
     .stApp { background-color: #E0F2F7 !important; }
+
+    /* 文字全般 */
+    h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
     
     /* サイドバー全体の背景 */
     [data-testid="stSidebar"] {
