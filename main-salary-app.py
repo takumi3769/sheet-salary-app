@@ -53,13 +53,13 @@ st.markdown("""
         background-color: #007BFF !important; /* はっきりした青 */
     }
 
-    /* 2. 入力されている文字を白に（最優先） */
+    /* 2. 入力されている文字を白に（最優先）
     [data-testid="stSidebar"] input[type="number"],
     [data-testid="stSidebar"] input {
         color: white !important;
         -webkit-text-fill-color: white !important; /* Safari/ダークモード強制 */
         caret-color: white !important; /* 入力カーソルも白に */
-    }
+    }*/
 
     /* 3. サイドバーの「＋」「ー」ボタンなどの色調整 */
     [data-testid="stSidebar"] button[kind="secondary"] {
