@@ -33,84 +33,64 @@ sheet = init_spreadsheet()
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
 # --- 3. カスタムCSS（スマホ・ダークモード対応・サイドバー黄色化） ---
+# --- 3. カスタムCSS（ダークモード強制上書き・床を青、文字を白に） ---
 st.markdown("""
     <style>
     /* メインエリアの背景 */
     .stApp { background-color: #E0F2F7 !important; }
-/* --- サイドバー内の入力ボックス自体の設定 --- */
-
-/* 文字全般 */
-    h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
-
-    /* サイドバーの数値入力欄（時給）の床を青にする */
-    [data-testid="stSidebar"] div[data-baseweb="input"] {
-        background-color: #A1C4FD !important; /* 明るい青色 */
-        border: 2px solid #000000 !important; /* 枠線を黒で強調 */
-        border-radius: 8px !important;
-    }
-
-    /* 入力されている数値の色を黒にする */
-    [data-testid="stSidebar"] input {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-        font-weight: bold !important;
-    }
-
-    /* プラスマイナスボタンなどの色調整（必要であれば） */
-    [data-testid="stSidebar"] button {
-        color: #000000 !important;
-    }
-
-/* サイドバーの背景 */
+    
+    /* サイドバーの背景（黄色） */
     [data-testid="stSidebar"] {
         background-color: #FFEB3B !important;
     }
 
-/* 選択済み項目の文字色 */
-[data-testid="stSidebar"] div[data-baseweb="select"] span {
-    color: #000000 !important;
-}
-
-/* 入力欄のラベル（"基本時給(円)"など）の文字色 */
-[data-testid="stSidebar"] label p {
-    color: #000000 !important;
-}
-　　/* --- 入力フォーム内の文字を黒くする設定 --- */
-    /* 入力フィールドのテキスト色 */
-    input {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important; /* iOS/Safari対策 */
-    }
-
-    /* セレクトボックス（時・分）の選択済みテキスト色 */
-    div[data-baseweb="select"] div {
-        color: #000000 !important;
-    }
-    
-    /* ボタンのスタイル */
-    div.stButton > button {
-        transition: all 0.2s ease-in-out !important;
-        border-radius: 12px !important;
-        background-color: #D3D3D3 !important;
-        color: #000000 !important;
-        font-weight: bold !important;
-        height: 3em !important;
-        width: 100% !important;
-    }
-    div.stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border-color: #ff4b4b !important;
-    }
-    
-    /* 入力エリアの背景（白） */
-    div[data-baseweb="input"], div[data-baseweb="select"] > div {
-        background-color: #FFFFFF !important;
+    /* --- サイドバー内の数値入力欄の設定 --- */
+    /* 入力欄の「床」を青くし、枠線をハッキリさせる */
+    [data-testid="stSidebar"] div[data-baseweb="input"] {
+        background-color: #4A90E2 !important; /* 少し濃いめの青（白文字が映えるよう調整） */
+        border: 2px solid #000000 !important;
         border-radius: 8px !important;
+    }
+
+    /* 入力されている「文字」を白くする */
+    [data-testid="stSidebar"] input {
+        color: #FFFFFF !important; /* 文字色を白 */
+        -webkit-text-fill-color: #FFFFFF !important; /* iOS/ダークモード対策 */
+        font-weight: bold !important;
+    }
+
+    /* サイドバー内のラベルやヘッダーは黒 */
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] label p,
+    [data-testid="stSidebar"] .stMarkdown p {
+        color: #000000 !important;
+    }
+
+    /* --- メイン画面の設定 --- */
+    /* メイン画面の文字は黒 */
+    [data-testid="stMain"] h1, 
+    [data-testid="stMain"] h2, 
+    [data-testid="stMain"] h3, 
+    [data-testid="stMain"] label p, 
+    [data-testid="stMain"] .stMarkdown {
+        color: #000000 !important;
+    }
+
+    /* メイン画面の入力欄（床）は白、文字は黒 */
+    [data-testid="stMain"] div[data-baseweb="input"], 
+    [data-testid="stMain"] div[data-baseweb="select"] > div {
+        background-color: #FFFFFF !important;
+        border: 1px solid #000000 !important;
+    }
+    
+    [data-testid="stMain"] input,
+    [data-testid="stMain"] div[data-baseweb="select"] span {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
     }
     </style>
 """, unsafe_allow_html=True)
-
 # --- 4. サイドバー：時給設定 ---
 if 'hourly_wage' not in st.session_state:
     st.session_state.hourly_wage = 1200
