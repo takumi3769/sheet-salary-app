@@ -42,29 +42,29 @@ st.markdown("""
 /* 文字全般 */
     h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
 
+    /* サイドバーの数値入力欄（時給）の床を青にする */
+    [data-testid="stSidebar"] div[data-baseweb="input"] {
+        background-color: #A1C4FD !important; /* 明るい青色 */
+        border: 2px solid #000000 !important; /* 枠線を黒で強調 */
+        border-radius: 8px !important;
+    }
+
+    /* 入力されている数値の色を黒にする */
+    [data-testid="stSidebar"] input {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+        font-weight: bold !important;
+    }
+
+    /* プラスマイナスボタンなどの色調整（必要であれば） */
+    [data-testid="stSidebar"] button {
+        color: #000000 !important;
+    }
+
 /* サイドバーの背景 */
     [data-testid="stSidebar"] {
         background-color: #FFEB3B !important;
     }
-
-/* 数値入力やテキスト入力の枠内を灰色に */
-[data-testid="stSidebar"] div[data-baseweb="input"] {
-    background-color: #D3D3D3 !important; /* 灰色 */
-    border: 1px solid #999999 !important; /* 枠線を少し濃くして視認性を向上 */
-}
-
-/* サイドバーの数値入力欄（時給）の枠内を灰色にする */
-    [data-testid="stSidebar"] div[data-baseweb="input"] {
-        background-color: #D3D3D3 !important; /* 薄い灰色 */
-        border: 1px solid #000000 !important; /* 枠線を黒にして見やすく */
-    }
-
-/* --- サイドバー内の文字色の固定 --- */
-/* 入力中の文字色 */
-[data-testid="stSidebar"] input {
-    color: #000000 !important;
-    -webkit-text-fill-color: #000000 !important; /* iOS対策 */
-}
 
 /* 選択済み項目の文字色 */
 [data-testid="stSidebar"] div[data-baseweb="select"] span {
