@@ -33,12 +33,26 @@ sheet = init_spreadsheet()
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
 # --- 3. カスタムCSS（スマホ・ダークモード対応） ---
+# --- 3. カスタムCSS（スマホ・ダークモード対応・サイドバー黄色化） ---
 st.markdown("""
     <style>
+    /* メインエリアの背景 */
     .stApp { background-color: #E0F2F7 !important; }
-    h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
     
-    /* ボタンのホバーエフェクト */
+    /* サイドバーの背景を黄色に、文字を黒に固定 */
+    [data-testid="stSidebar"] {
+        background-color: #FFEB3B !important; /* 明るい黄色 */
+    }
+    [data-testid="stSidebar"] * {
+        color: #000000 !important; /* サイドバー内の全要素を黒文字に */
+    }
+
+    /* メインエリアの文字色（日付・ラベル・マークダウン） */
+    h1, h2, h3, p, label, .stMarkdown, [data-testid="stWidgetLabel"] p { 
+        color: #000000 !important; 
+    }
+    
+    /* ボタンのスタイル */
     div.stButton > button {
         transition: all 0.2s ease-in-out !important;
         border-radius: 12px !important;
@@ -54,7 +68,7 @@ st.markdown("""
         border-color: #ff4b4b !important;
     }
     
-    /* 入力エリアの背景 */
+    /* 入力エリアの背景（白） */
     div[data-baseweb="input"], div[data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
         border-radius: 8px !important;
