@@ -77,13 +77,21 @@ st.markdown("""
     }
 
     /* --- メインエリアの入力欄の設定（床は白、文字は黒） --- */
+    /* 1. 入力欄の外枠と背景 */
     [data-testid="stMain"] div[data-baseweb="input"],
     [data-testid="stMain"] div[data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
         border: 1px solid #000000 !important;
     }
-    [data-testid="stMain"] input,
-    [data-testid="stMain"] div[role="listbox"] span {
+
+    /* 2. 入力欄・セレクトボックス内のすべての文字を黒に強制 */
+    [data-testid="stMain"] div[data-baseweb="select"] * {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+    }
+
+    /* 3. 直接的な input タグ（日付など）も黒に */
+    [data-testid="stMain"] input {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
