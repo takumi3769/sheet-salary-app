@@ -43,13 +43,22 @@ st.markdown("""
     [data-testid="stSidebar"] {
         background-color: #FFEB3B !important; /* 明るい黄色 */
     }
-    [data-testid="stSidebar"] * {
-        color: #000000 !important; /* サイドバー内の全要素を黒文字に */
-    }
 
     /* メインエリアの文字色（日付・ラベル・マークダウン） */
     h1, h2, h3, p, label, .stMarkdown, [data-testid="stWidgetLabel"] p { 
         color: #000000 !important; 
+    }
+
+　　/* --- 入力フォーム内の文字を黒くする設定 --- */
+    /* 入力フィールドのテキスト色 */
+    input {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important; /* iOS/Safari対策 */
+    }
+
+    /* セレクトボックス（時・分）の選択済みテキスト色 */
+    div[data-baseweb="select"] div {
+        color: #000000 !important;
     }
     
     /* ボタンのスタイル */
