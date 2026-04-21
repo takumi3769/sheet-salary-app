@@ -39,6 +39,12 @@ st.markdown("""
     /* メインエリアの背景 */
     .stApp { background-color: #E0F2F7 !important; }
 /* --- サイドバー内の入力ボックス自体の設定 --- */
+
+/* サイドバーの背景 */
+    [data-testid="stSidebar"] {
+        background-color: #FFEB3B !important;
+    }
+
 /* 数値入力やテキスト入力の枠内を灰色に */
 [data-testid="stSidebar"] div[data-baseweb="input"] {
     background-color: #D3D3D3 !important; /* 灰色 */
