@@ -95,6 +95,19 @@ st.markdown("""
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
+
+    /* 「スプレッドシートに保存」ボタンだけを灰色にする */
+    div.stButton > button {
+        background-color: #D3D3D3 !important; /* 明るい灰色 */
+        color: #000000 !important;           /* 文字色を黒 */
+        border: 1px solid #000000 !important; /* 枠線を黒 */
+    }
+
+    /* ホバー時（マウスを乗せた時）の設定 */
+    div.stButton > button:hover {
+        background-color: #BDBDBD !important; /* 少し濃い灰色 */
+        border-color: #000000 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
