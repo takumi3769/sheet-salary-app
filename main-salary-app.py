@@ -32,8 +32,7 @@ sheet = init_spreadsheet()
 # --- 2. 画面基本設定 ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
-# --- 3. カスタムCSS（最優先設定：サイドバー床=青、文字=白） ---
-# --- 3. カスタムCSS（サイドバー：背景黄色・文字黒に限定） ---
+# --- 3. カスタムCSS（サイドバーのボックスもメインと同じ白床・黒文字に設定） ---
 st.markdown("""
     <style>
     /* メインエリア全体の背景 */
@@ -48,19 +47,19 @@ st.markdown("""
         background-color: #FFEB3B !important;
     }
 
-    /* 2. サイドバー内のすべての文字（ラベル、入力値、ボタン等）を黒に強制 */
+    /* 2. サイドバー内の入力ボックスの設定（メインエリアと同じ仕様） */
+    [data-testid="stSidebar"] div[data-baseweb="input"],
+    [data-testid="stSidebar"] div[data-baseweb="base-input"] {
+        background-color: #FFFFFF !important; /* 床を白に */
+        border: 1px solid #000000 !important; /* 枠線を黒に */
+    }
+
+    /* 3. サイドバー内の入力文字、ラベル、その他すべてを黒に強制 */
     [data-testid="stSidebar"] * {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
-    /* 3. 入力ボックスの背景を、黄色に馴染む「白」か「透明」に固定 */
-    /* これを指定しないと、ダークモード時にボックス内だけ真っ黒になります */
-    [data-testid="stSidebar"] div[data-baseweb="input"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #000000 !important;
-    }
-    
     /* --- メインエリアの入力欄の設定（床は白、文字は黒） --- */
     [data-testid="stMain"] div[data-baseweb="input"],
     [data-testid="stMain"] div[data-baseweb="select"] > div {
@@ -83,10 +82,6 @@ st.markdown("""
         background-color: #D3D3D3 !important;
         color: #000000 !important;
         border: 1px solid #000000 !important;
-    }
-
-    div.stButton > button:hover {
-        background-color: #BDBDBD !important;
     }
     </style>
 """, unsafe_allow_html=True)
