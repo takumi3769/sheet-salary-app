@@ -43,15 +43,16 @@ st.markdown("""
     
     n
 # --- 3. カスタムCSS（隙間の黒を解消する修正版） ---
-    /* サイドバー全体の背景 */
-    [data-testid="stSidebar"] {
+   /* --- サイドバー全体の背景：暗くなるのを防ぐためにグラデーションで塗りつぶす --- */
+    [data-testid="stSidebar"] > div:first-child {
+        background-image: linear-gradient(#FFEB3B, #FFEB3B) !important;
         background-color: #FFEB3B !important;
+        opacity: 1 !important;
     }
 
-    /* 入力ボックス全体の枠線と背景 */
-    [data-testid="stSidebar"] div[data-baseweb="input"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #000000 !important; /* 外枠を黒に */
+    /* サイドバー内のコンテナも透明にして背景の黄色を出す */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        background-color: transparent !important;
     }
 
     /* 数値入力部分 */
