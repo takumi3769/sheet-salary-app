@@ -42,28 +42,44 @@ st.markdown("""
     h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
     
     /* --- サイドバーの設定 --- */
-    /* 1. サイドバー全体の背景を黄色に */
+    /* --- サイドバー全体の背景 --- */
     [data-testid="stSidebar"] {
         background-color: #FFEB3B !important;
     }
 
-    /* 左側の「－」ボタン（青） */
-    [data-testid="stSidebar"] button[kind="secondary"]:first-of-type {
+    /* --- サイドバーの入力ボックス（白床・黒枠） --- */
+    [data-testid="stSidebar"] div[data-baseweb="input"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #000000 !important;
+    }
+    [data-testid="stSidebar"] input {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+    }
+
+    /* --- 【最重要】＋ーボタンの強制色付け --- */
+    /* Streamlitのボタン要素を直接指定し、背景が反映されない現象を阻止します */
+    
+    /* マイナスボタン（左側）: step-down */
+    [data-testid="stSidebar"] button[data-testid="stNumberInputStepDown"] {
         background-color: #007BFF !important; /* 青 */
-        border: 1px solid #000000 !important;
-    }
-
-    /* 右側の「＋」ボタン（赤） */
-    [data-testid="stSidebar"] button[kind="secondary"]:last-of-type {
-        background-color: #FF4B4B !important; /* 赤 */
-        border: 1px solid #000000 !important;
-    }
-
-    /* ボタンの中の記号（＋ー）を白にして目立たせる */
-    [data-testid="stSidebar"] button[kind="secondary"] * {
         color: #FFFFFF !important;
+        opacity: 1 !important;
+        border: 1px solid #000000 !important;
+    }
+
+    /* プラスボタン（右側）: step-up */
+    [data-testid="stSidebar"] button[data-testid="stNumberInputStepUp"] {
+        background-color: #FF4B4B !important; /* 赤 */
+        color: #FFFFFF !important;
+        opacity: 1 !important;
+        border: 1px solid #000000 !important;
+    }
+
+    /* ボタンの中の「＋」「ー」記号を白に固定 */
+    [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] svg {
         fill: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
+        color: #FFFFFF !important;
     }
     
     /* 2. サイドバー内の入力ボックスの設定（メインエリアと同じ仕様） */
