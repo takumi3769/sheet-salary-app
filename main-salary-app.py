@@ -33,71 +33,97 @@ sheet = init_spreadsheet()
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
 # --- 3. カスタムCSS（ボックスの黒色を白に強制修正版） ---
+# --- 3. カスタムCSS（メインエリアの白床・黒文字を強制復活版） ---
 st.markdown("""
     <style>
-    /* 1. メインエリアの設定 */
+    /* --- 1. メインエリア全体の再設定（最優先） --- */
+    /* 背景色を明るい水色に固定 */
     .stApp { background-color: #E0F2F7 !important; }
-    
-    /* 2. サイドバー全体の背景と明るさ固定 */
-    [data-testid="stSidebar"], 
-    [data-testid="stSidebarNav"], 
-    [data-testid="stSidebar"] > div:first-child, 
-    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+
+    /* メインエリア内のすべての文字（タイトル、ラベル、入力値）を黒に強制 */
+    /* ダークモードによる白反転を強力に打ち消します */
+    [data-testid="stMain"] * {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+    }
+
+    /* メインエリアのすべての入力ボックス（日付、セレクトボックス）を白に強制 */
+    [data-testid="stMain"] div[data-baseweb="input"],
+    [data-testid="stMain"] div[data-baseweb="base-input"],
+    [data-testid="stMain"] div[data-baseweb="select"] > div {
+        background-color: #FFFFFF !important; /* 床を白に */
+        color: #000000 !important;           /* 文字を黒に */
+        border: 1px solid #000000 !important; /* 枠線を黒に */
+    }
+
+    /* 日付入力欄などのテキストを黒に固定 */
+    [data-testid="stMain"] input {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+    }
+
+    /* セレクトボックスの矢印アイコンなども黒に */
+    [data-testid="stMain"] svg {
+        fill: #000000 !important;
+    }
+
+
+    /* --- 2. サイドバーの設定（明るい黄色・赤青ボタンを維持） --- */
+    [data-testid="stSidebar"] {
         background-color: #FFEB3B !important;
-        background-image: none !important;
-        filter: brightness(100%) !important;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        background-color: transparent !important;
     }
 
-    /* 3. 【ここが最重要】入力ボックス内の「黒」を消して「白」にする */
-    /* 階層を深く指定して、ダークモードの背景色を上書きします */
-    [data-testid="stSidebar"] div[data-baseweb="input"],
-    [data-testid="stSidebar"] div[data-baseweb="base-input"],
-    [data-testid="stSidebar"] div[data-baseweb="input"] > div {
-        background-color: #FFFFFF !important; /* 床を白に強制 */
-        color: #000000 !important;           /* 文字を黒に強制 */
+    /* サイドバーの入力ボックス（白床・黒枠・黒文字） */
+    [data-testid="stSidebar"] div[data-baseweb="input"] {
+        background-color: #FFFFFF !important;
         border: 1px solid #000000 !important;
+        border-radius: 4px !important;
     }
-
-    /* 入力中の文字色も黒に固定 */
     [data-testid="stSidebar"] input {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
-        background-color: #FFFFFF !important;
     }
 
-    /* 4. ＋ーボタンの隙間なし・赤青設定 */
+    /* ＋ーボタンの隙間なし・赤青設定 */
     [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] {
         border: none !important;
         margin: 0 !important;
         height: 100% !important;
         opacity: 1 !important;
     }
-
-    /* マイナス（青） */
     [data-testid="stSidebar"] button[data-testid="stNumberInputStepDown"] {
         background-color: #007BFF !important;
         border-right: 1px solid #007BFF !important;
     }
-
-    /* プラス（赤） */
     [data-testid="stSidebar"] button[data-testid="stNumberInputStepUp"] {
         background-color: #FF4B4B !important;
         border-left: 1px solid #FF4B4B !important;
     }
-
-    /* 記号（＋ー）を白に */
     [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] svg {
         fill: #FFFFFF !important;
         color: #FFFFFF !important;
     }
 
-    /* 5. サイドバー全体の文字を黒に固定 */
+    /* サイドバーのすべての文字を黒に固定 */
     [data-testid="stSidebar"] * {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
-    /* 6. st.info（下の注釈ボックス）も黄色に馴染ませる場合 */
+
+    /* --- 3. その他（ボタン、注釈） --- */
+    /* 「スプレッドシートに保存」ボタン（灰色・黒文字） */
+    [data-testid="stMain"] div.stButton > button {
+        background-color: #D3D3D3 !important;
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
+    }
+
+    /* st.info（サイドバー下の注釈ボックス）も黄色に馴染ませる */
     [data-testid="stSidebar"] div[data-testid="stNotification"] {
         background-color: #E6D632 !important;
         color: #000000 !important;
