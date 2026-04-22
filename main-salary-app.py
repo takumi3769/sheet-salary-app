@@ -109,6 +109,12 @@ st.markdown("""
     [data-testid="stMain"] div[data-testid="stMarkdownContainer"] p {
         color: #000000 !important;
     }
+    /* 保存ボタン（灰色） */
+    [data-testid="stMain"] div.stButton > button {
+        background-color: #D3D3D3 !important;
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 # --- 4. サイドバー：時給設定 ---
