@@ -61,11 +61,11 @@ st.markdown("""
         caret-color: white !important; /* 入力カーソルも白に */
     }*/
 
-　　/* --- 5. ラベルなどの文字も黒に --- */
+　　/* --- 5. ラベルなどの文字も白に --- */
     [data-testid="stSidebar"] label p,
     [data-testid="stSidebar"] .stMarkdown p {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
     
     /* 4. サイドバー内のテキスト（設定、基本時給など）は黒 */
