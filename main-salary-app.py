@@ -6,32 +6,31 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # --- 1. スプレッドシート接続設定 ---
-def init_spreadsheet(month_str):
+def init_spreadsheet_service():
     scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
     try:
         creds_info = st.secrets["gcp_service_account"]
         credentials = Credentials.from_service_account_info(creds_info, scopes=scopes)
         gc = gspread.authorize(credentials)
-        
         sh = gc.open("給料管理")
-        
-        try:
-            worksheet = sh.worksheet(month_str)
-        except gspread.exceptions.WorksheetNotFound:
-            # なければ新規作成し、ヘッダーを追加
-            worksheet = sh.add_worksheet(title=month_str, rows="100", cols="10")
-            header = ["日付", "出勤", "退勤", "労働(h)", "深夜(h)", "給料"]
-            worksheet.append_row(header)
-            
-        return worksheet
+        return sh
     except Exception as e:
         st.error(f"スプレッドシートへの接続に失敗しました: {e}")
         return None
 
+def get_worksheet(sh, month_str):
+    try:
+        return sh.worksheet(month_str)
+    except gspread.exceptions.WorksheetNotFound:
+        worksheet = sh.add_worksheet(title=month_str, rows="100", cols="10")
+        header = ["日付", "出勤", "退勤", "労働(h)", "深夜(h)", "給料"]
+        worksheet.append_row(header)
+        return worksheet
+
 # --- 2. 画面基本設定 ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
-# --- 表の上のツールバーを非表示にするCSS (修正済み) ---
+# 表の上のツールバーを非表示にするCSS
 st.markdown("""
     <style>
     [data-testid="stElementToolbar"] {
@@ -49,6 +48,9 @@ with st.sidebar:
     st.session_state.hourly_wage = st.number_input("基本時給(円)", value=st.session_state.hourly_wage, step=10)
 
 st.title("💰 給料管理システム")
+
+# スプレッドシート本体の取得
+sh_main = init_spreadsheet_service()
 
 # --- 4. 入力セクション ---
 st.subheader("📅 勤務情報の入力")
@@ -106,20 +108,21 @@ st.metric("計算された給料", f"{salary:,} 円", f"{actual_h:.2f} 時間労
 
 # --- 6. 保存処理 ---
 if st.button("💾 スプレッドシートに保存"):
-    sheet = init_spreadsheet(target_month)
-    if sheet:
+    if sh_main:
+        sheet = get_worksheet(sh_main, target_month)
         new_row = [d.strftime('%Y-%m-%d'), f"{sh:02d}:{sm:02d}", f"{eh:02d}:{em:02d}", round(actual_h, 2), round(night_h, 2), salary]
         sheet.append_row(new_row)
         st.success(f"シート「{target_month}」に保存しました！")
+        st.rerun()
     else:
         st.error("保存に失敗しました。")
 
-# --- 7. 履歴表示・削除 ---
+# --- 7. 履歴表示・削除（選択中の月） ---
 st.divider()
-st.subheader(f"📊 {target_month} の履歴管理")
+st.subheader(f"📊 {target_month} の履歴詳細")
 
-sheet = init_spreadsheet(target_month)
-if sheet:
+if sh_main:
+    sheet = get_worksheet(sh_main, target_month)
     data = sheet.get_all_records()
     if data:
         df = pd.DataFrame(data)
@@ -128,12 +131,10 @@ if sheet:
         
         edited_df = st.data_editor(
             df,
-            column_config={
-                "選択": st.column_config.CheckboxColumn(required=True),
-                "row_idx": None
-            },
+            column_config={"選択": st.column_config.CheckboxColumn(required=True), "row_idx": None},
             disabled=[col for col in df.columns if col != "選択"],
             hide_index=True,
+            key="current_month_editor"
         )
 
         if not edited_df[edited_df["選択"]].empty:
@@ -143,9 +144,45 @@ if sheet:
                     sheet.delete_rows(r)
                 st.rerun()
 
-        st.write(f"### {target_month} 合計")
         m1, m2 = st.columns(2)
-        m1.metric("支給額合計", f"{df['給料'].sum():,} 円")
-        m2.metric("労働時間合計", f"{df['労働(h)'].sum():.1f} h")
+        m1.metric(f"{target_month} 支給額", f"{df['給料'].sum():,} 円")
+        m2.metric(f"{target_month} 労働時間", f"{df['労働(h)'].sum():.1f} h")
     else:
-        st.info("この月のデータはまだありません。")
+        st.info(f"{target_month} のデータはまだありません。")
+
+# --- 8. 【新機能】月別収入一覧 ---
+st.divider()
+st.subheader("📅 月別収入一覧")
+
+if sh_main:
+    all_sheets = sh_main.worksheets()
+    summary_data = []
+
+    for s in all_sheets:
+        # シート名が「YYYY-MM」形式のものだけを集計対象にする
+        if len(s.title) == 7 and s.title[4] == '-':
+            content = s.get_all_records()
+            if content:
+                temp_df = pd.DataFrame(content)
+                total_wage = temp_df['給料'].sum()
+                total_hours = temp_df['労働(h)'].sum()
+                summary_data.append({
+                    "月": s.title,
+                    "支給額合計": total_wage,
+                    "労働時間合計": round(total_hours, 1)
+                })
+
+    if summary_data:
+        summary_df = pd.DataFrame(summary_data).sort_values("月", ascending=False)
+        # 一覧表を表示（ここもツールバーはCSSで消えます）
+        st.dataframe(
+            summary_df,
+            column_config={
+                "支給額合計": st.column_config.NumberColumn(format="%d 円"),
+                "労働時間合計": st.column_config.NumberColumn(format="%.1f h")
+            },
+            hide_index=True,
+            use_container_width=True
+        )
+    else:
+        st.write("集計可能な月のデータがありません。")
