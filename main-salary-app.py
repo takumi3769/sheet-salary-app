@@ -33,74 +33,53 @@ sheet = init_spreadsheet()
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
 # --- 3. カスタムCSS（最優先設定：サイドバー床=青、文字=白） ---
+# --- 3. カスタムCSS（サイドバー：背景黄色・文字黒に限定） ---
 st.markdown("""
     <style>
     /* メインエリア全体の背景 */
     .stApp { background-color: #E0F2F7 !important; }
 
-    /* 文字全般 */
+    /* 文字全般を黒に */
     h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
     
-    /* サイドバー全体の背景 */
+    /* --- サイドバーの設定 --- */
+    /* 1. サイドバー全体の背景を黄色に */
     [data-testid="stSidebar"] {
         background-color: #FFEB3B !important;
     }
 
-    /* --- サイドバー内の入力ボックス（時給）の強制設定 --- */
-    /* 1. 入力欄の背景（床）を灰色に */
-    [data-testid="stSidebar"] div[data-baseweb="input"],
-    [data-testid="stSidebar"] div[data-baseweb="base-input"] {
-        background-color: #BDBDBD !important; 
-    }
-
-    /* 2. 入力されている文字を白に（最優先）
-    [data-testid="stSidebar"] input[type="number"],
-    [data-testid="stSidebar"] input {
-        color: white !important;
-        -webkit-text-fill-color: white !important; /* Safari/ダークモード強制 */
-        caret-color: white !important; /* 入力カーソルも白に */
-    }*/
-    
-    /* 4. サイドバー内のテキスト（設定、基本時給など）は黒 */
+    /* 2. サイドバー内のすべての文字（ラベル、入力値、ボタン等）を黒に強制 */
     [data-testid="stSidebar"] * {
         color: #000000 !important;
-    }
-    /* ただし、inputタグ内だけは白（上記2の設定を維持） */
-    [data-testid="stSidebar"] input {
-        color: white !important;
+        -webkit-text-fill-color: #000000 !important;
     }
 
     /* --- メインエリアの入力欄の設定（床は白、文字は黒） --- */
-    /* 1. 入力欄の外枠と背景 */
     [data-testid="stMain"] div[data-baseweb="input"],
     [data-testid="stMain"] div[data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
         border: 1px solid #000000 !important;
     }
 
-    /* 2. 入力欄・セレクトボックス内のすべての文字を黒に強制 */
     [data-testid="stMain"] div[data-baseweb="select"] * {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
-    /* 3. 直接的な input タグ（日付など）も黒に */
     [data-testid="stMain"] input {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
-    /* 「スプレッドシートに保存」ボタンだけを灰色にする */
+    /* 「スプレッドシートに保存」ボタンの設定 */
     div.stButton > button {
-        background-color: #D3D3D3 !important; /* 明るい灰色 */
-        color: #000000 !important;           /* 文字色を黒 */
-        border: 1px solid #000000 !important; /* 枠線を黒 */
+        background-color: #D3D3D3 !important;
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
     }
 
-    /* ホバー時（マウスを乗せた時）の設定 */
     div.stButton > button:hover {
-        background-color: #BDBDBD !important; /* 少し濃い灰色 */
-        border-color: #000000 !important;
+        background-color: #BDBDBD !important;
     }
     </style>
 """, unsafe_allow_html=True)
