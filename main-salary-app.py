@@ -61,26 +61,27 @@ st.markdown("""
         caret-color: white !important; /* 入力カーソルも白に */
     }*/
 
-　   /* 左側の「－」ボタン（青） */
-    [data-testid="stSidebar"] button[kind="secondary"]:first-child {
-        background-color: #0000FF !important; /* 濃い青 */
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-        border: none !important;
+　   /* 左側の「－」ボタンを青に */
+    [data-testid="stSidebar"] button[aria-label="Decrease salary"] , /* 英語環境用 */
+    [data-testid="stSidebar"] button[kind="secondary"]:first-of-type {
+        background-color: #0000FF !important;
+        border-radius: 4px 0 0 4px !important;
     }
 
-    /* 右側の「＋」ボタン（赤） */
-    [data-testid="stSidebar"] button[kind="secondary"]:last-child {
-        background-color: #FF0000 !important; /* 鮮やかな赤 */
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-        border: none !important;
+    /* 右側の「＋」ボタンを赤に */
+    [data-testid="stSidebar"] button[aria-label="Increase salary"] , /* 英語環境用 */
+    [data-testid="stSidebar"] button[kind="secondary"]:last-of-type {
+        background-color: #FF0000 !important;
+        border-radius: 0 4px 4px 0 !important;
     }
 
-    /* ボタンの中の「＋」「ー」記号自体の色も白に固定 */
+    /* 5. ボタンの中の記号（＋やー）の色を白に強制 */
+    [data-testid="stSidebar"] button[kind="secondary"] p,
+    [data-testid="stSidebar"] button[kind="secondary"] span,
     [data-testid="stSidebar"] button[kind="secondary"] svg {
-        fill: #FFFFFF !important;
         color: #FFFFFF !important;
+        fill: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
     
     /* 4. サイドバー内のテキスト（設定、基本時給など）は黒 */
