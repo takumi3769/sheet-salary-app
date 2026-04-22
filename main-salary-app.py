@@ -46,11 +46,14 @@ st.markdown("""
         background-color: #FFEB3B !important;
     }
 
-    /* --- サイドバーの入力ボックス（白床・黒枠） --- */
+   /* --- サイドバーの入力ボックス（床は白、文字は黒、枠線あり） --- */
     [data-testid="stSidebar"] div[data-baseweb="input"] {
         background-color: #FFFFFF !important;
         border: 1px solid #000000 !important;
+        border-radius: 4px !important;
     }
+
+    /* ボックス内の文字色を黒に固定 */
     [data-testid="stSidebar"] input {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
