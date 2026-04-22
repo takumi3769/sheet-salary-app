@@ -84,11 +84,6 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* サイドバーのラベル文字を黒に */
-    [data-testid="stSidebar"] label p {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-    }
 
     /* メインエリアの設定（既存通り） */
     [data-testid="stMain"] div[data-baseweb="input"] {
