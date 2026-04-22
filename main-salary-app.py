@@ -61,26 +61,7 @@ st.markdown("""
         caret-color: white !important; /* 入力カーソルも白に */
     }*/
 
-　   /* --- 4. ＋－ボタンの色と記号の白固定 --- */
-    
-    /* マイナスボタン（左）を青に */
-    [data-testid="stSidebar"] button[kind="secondary"]:first-of-type {
-        background-color: #0000FF !important;
-        border: none !important;
-    }
-
-    /* プラスボタン（右）を赤に */
-    [data-testid="stSidebar"] button[kind="secondary"]:last-of-type {
-        background-color: #FF0000 !important;
-        border: none !important;
-    }
-
-    /* ボタンの中の「＋」「－」を絶対に白くする */
-    [data-testid="stSidebar"] button[kind="secondary"] * {
-        color: #FFFFFF !important;
-        fill: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-    }
+　
     
     /* 4. サイドバー内のテキスト（設定、基本時給など）は黒 */
     [data-testid="stSidebar"] * {
