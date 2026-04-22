@@ -61,10 +61,17 @@ st.markdown("""
         caret-color: white !important; /* 入力カーソルも白に */
     }*/
 
-    /* 3. サイドバーの「＋」「ー」ボタンなどの色調整 */
-    [data-testid="stSidebar"] button[kind="secondary"] {
-        color: #000000 !important;
-        background-color: #D3D3D3 !important;
+    /* サイドバー内の number_input の「＋」「ー」ボタンの設定 */
+    /* マイナスボタン（左側）を青に */
+    [data-testid="stSidebar"] button[kind="secondary"]:first-child {
+        background-color: #007BFF !important; /* 青 */
+        color: white !important;
+    }
+
+    /* プラスボタン（右側）を赤に */
+    [data-testid="stSidebar"] button[kind="secondary"]:last-child {
+        background-color: #FF4B4B !important; /* 赤 */
+        color: white !important;
     }
 
     /* 4. サイドバー内のテキスト（設定、基本時給など）は黒 */
