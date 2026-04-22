@@ -41,60 +41,60 @@ st.markdown("""
     /* 文字全般を黒に */
     h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
     
-    n
-# --- 3. カスタムCSS（隙間の黒を解消する修正版） ---
-   /* --- サイドバー全体の背景：暗くなるのを防ぐためにグラデーションで塗りつぶす --- */
-    [data-testid="stSidebar"] > div:first-child {
-        background-image: linear-gradient(#FFEB3B, #FFEB3B) !important;
+/* --- サイドバー全体の背景 --- */
+    [data-testid="stSidebar"] {
         background-color: #FFEB3B !important;
-        opacity: 1 !important;
     }
 
-    /* サイドバー内のコンテナも透明にして背景の黄色を出す */
-    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        background-color: transparent !important;
+    /* --- サイドバーの入力ボックス（白床・黒枠） --- */
+    [data-testid="stSidebar"] div[data-baseweb="input"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #000000 !important;
     }
-
-    /* 数値入力部分 */
     [data-testid="stSidebar"] input {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
-    /* --- ボタンの隙間対策 --- */
+    /* --- 【最重要】＋ーボタンの強制色付け --- */
+    /* Streamlitのボタン要素を直接指定し、背景が反映されない現象を阻止します */
     
-    /* 共通設定：枠線を消して隙間を埋める */
-    [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] {
-        border: none !important; /* 個別の枠線を消す */
-        margin: 0 !important;    /* 余白をゼロに */
-        height: 100% !important;
-    }
-
-    /* マイナスボタン（左側） */
+    /* マイナスボタン（左側）: step-down */
     [data-testid="stSidebar"] button[data-testid="stNumberInputStepDown"] {
-        background-color: #007BFF !important;
-        /* 右側に薄くボタンと同じ色の境界線を引くことで隙間を埋める */
-        border-right: 1px solid #007BFF !important; 
+        background-color: #007BFF !important; /* 青 */
+        color: #FFFFFF !important;
+        opacity: 1 !important;
+        border: 1px solid #000000 !important;
     }
 
-    /* プラスボタン（右側） */
+    /* プラスボタン（右側）: step-up */
     [data-testid="stSidebar"] button[data-testid="stNumberInputStepUp"] {
-        background-color: #FF4B4B !important;
-        /* 左側に薄くボタンと同じ色の境界線を引くことで隙間を埋める */
-        border-left: 1px solid #FF4B4B !important;
+        background-color: #FF4B4B !important; /* 赤 */
+        color: #FFFFFF !important;
+        opacity: 1 !important;
+        border: 1px solid #000000 !important;
     }
 
-    /* 記号（＋ー）を白に */
+    /* ボタンの中の「＋」「ー」記号を白に固定 */
     [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] svg {
         fill: #FFFFFF !important;
         color: #FFFFFF !important;
     }
-    
-    /* 2. サイドバー内の入力ボックスの設定（メインエリアと同じ仕様） */
-    [data-testid="stSidebar"] div[data-baseweb="input"],
-    [data-testid="stSidebar"] div[data-baseweb="base-input"] {
-        background-color: #FFFFFF !important; /* 床を白に */
-        border: 1px solid #000000 !important; /* 枠線を黒に */
+
+    /* サイドバーのラベル文字を黒に */
+    [data-testid="stSidebar"] label p {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+    }
+
+    /* メインエリアの設定（既存通り） */
+    [data-testid="stMain"] div[data-baseweb="input"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #000000 !important;
+    }
+    [data-testid="stMain"] * {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
     }
 
     /* 3. サイドバー内の入力文字、ラベル、その他すべてを黒に強制 */
