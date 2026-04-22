@@ -32,44 +32,40 @@ sheet = init_spreadsheet()
 # --- 2. 画面基本設定 ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
-# --- 3. カスタムCSS（完全統合版：暗さ解消・隙間なし・赤青ボタン） ---
+# --- 3. カスタムCSS（ボックスの黒色を白に強制修正版） ---
 st.markdown("""
     <style>
     /* 1. メインエリアの設定 */
     .stApp { background-color: #E0F2F7 !important; }
-    [data-testid="stMain"] * {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-    }
-    [data-testid="stMain"] div[data-baseweb="input"],
-    [data-testid="stMain"] div[data-baseweb="select"] > div {
-        background-color: #FFFFFF !important;
-        border: 1px solid #000000 !important;
-    }
-
-    /* 2. サイドバー全体の背景（暗くなるのを防ぐ最強設定） */
+    
+    /* 2. サイドバー全体の背景と明るさ固定 */
     [data-testid="stSidebar"], 
     [data-testid="stSidebarNav"], 
     [data-testid="stSidebar"] > div:first-child, 
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
         background-color: #FFEB3B !important;
         background-image: none !important;
-        filter: brightness(100%) !important; /* ダークモードのフィルターを解除 */
+        filter: brightness(100%) !important;
     }
 
-    /* 3. サイドバーの入力ボックス（白床・黒枠・黒文字） */
-    [data-testid="stSidebar"] div[data-baseweb="input"] {
-        background-color: #FFFFFF !important;
+    /* 3. 【ここが最重要】入力ボックス内の「黒」を消して「白」にする */
+    /* 階層を深く指定して、ダークモードの背景色を上書きします */
+    [data-testid="stSidebar"] div[data-baseweb="input"],
+    [data-testid="stSidebar"] div[data-baseweb="base-input"],
+    [data-testid="stSidebar"] div[data-baseweb="input"] > div {
+        background-color: #FFFFFF !important; /* 床を白に強制 */
+        color: #000000 !important;           /* 文字を黒に強制 */
         border: 1px solid #000000 !important;
-        border-radius: 4px !important;
     }
+
+    /* 入力中の文字色も黒に固定 */
     [data-testid="stSidebar"] input {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
+        background-color: #FFFFFF !important;
     }
 
-    /* 4. ＋ーボタンの強制色付けと隙間解消 */
-    /* 共通：枠線を消して密着させる */
+    /* 4. ＋ーボタンの隙間なし・赤青設定 */
     [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] {
         border: none !important;
         margin: 0 !important;
@@ -77,16 +73,16 @@ st.markdown("""
         opacity: 1 !important;
     }
 
-    /* マイナスボタン（左・青） */
+    /* マイナス（青） */
     [data-testid="stSidebar"] button[data-testid="stNumberInputStepDown"] {
         background-color: #007BFF !important;
-        border-right: 1px solid #007BFF !important; /* 隙間埋め */
+        border-right: 1px solid #007BFF !important;
     }
 
-    /* プラスボタン（右・赤） */
+    /* プラス（赤） */
     [data-testid="stSidebar"] button[data-testid="stNumberInputStepUp"] {
         background-color: #FF4B4B !important;
-        border-left: 1px solid #FF4B4B !important; /* 隙間埋め */
+        border-left: 1px solid #FF4B4B !important;
     }
 
     /* 記号（＋ー）を白に */
@@ -95,17 +91,17 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* 5. サイドバーのすべての文字を黒に固定 */
+    /* 5. サイドバー全体の文字を黒に固定 */
     [data-testid="stSidebar"] * {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
-    /* スプレッドシート保存ボタン（灰色） */
-    div.stButton > button {
-        background-color: #D3D3D3 !important;
+    /* 6. st.info（下の注釈ボックス）も黄色に馴染ませる場合 */
+    [data-testid="stSidebar"] div[data-testid="stNotification"] {
+        background-color: #E6D632 !important;
         color: #000000 !important;
-        border: 1px solid #000000 !important;
+        border: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
