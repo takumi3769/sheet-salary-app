@@ -47,10 +47,10 @@ st.markdown("""
     }
 
     /* --- サイドバー内の入力ボックス（時給）の強制設定 --- */
-    /* 1. 入力欄の背景（床）を青に */
+    /* 1. 入力欄の背景（床）を灰色に */
     [data-testid="stSidebar"] div[data-baseweb="input"],
     [data-testid="stSidebar"] div[data-baseweb="base-input"] {
-        background-color: #D3D3D3 !important; 
+        background-color: #BDBDBD !important; 
     }
 
     /* 2. 入力されている文字を白に（最優先）
