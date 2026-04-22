@@ -50,7 +50,7 @@ st.markdown("""
     /* 1. 入力欄の背景（床）を青に */
     [data-testid="stSidebar"] div[data-baseweb="input"],
     [data-testid="stSidebar"] div[data-baseweb="base-input"] {
-        background-color: #007BFF !important; /* はっきりした青 */
+        background-color: #D3D3D3 !important; 
     }
 
     /* 2. 入力されている文字を白に（最優先）
