@@ -54,6 +54,13 @@ st.markdown("""
         -webkit-text-fill-color: #000000 !important;
     }
 
+    /* 3. 入力ボックスの背景を、黄色に馴染む「白」か「透明」に固定 */
+    /* これを指定しないと、ダークモード時にボックス内だけ真っ黒になります */
+    [data-testid="stSidebar"] div[data-baseweb="input"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #000000 !important;
+    }
+    
     /* --- メインエリアの入力欄の設定（床は白、文字は黒） --- */
     [data-testid="stMain"] div[data-baseweb="input"],
     [data-testid="stMain"] div[data-baseweb="select"] > div {
