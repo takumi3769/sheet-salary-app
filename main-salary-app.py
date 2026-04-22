@@ -43,8 +43,6 @@ st.markdown("""
     
     n
 # --- 3. カスタムCSS（隙間の黒を解消する修正版） ---
-st.markdown("""
-    <style>
     /* サイドバー全体の背景 */
     [data-testid="stSidebar"] {
         background-color: #FFEB3B !important;
