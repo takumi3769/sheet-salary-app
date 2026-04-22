@@ -47,6 +47,25 @@ st.markdown("""
         background-color: #FFEB3B !important;
     }
 
+    /* 左側の「－」ボタン（青） */
+    [data-testid="stSidebar"] button[kind="secondary"]:first-of-type {
+        background-color: #007BFF !important; /* 青 */
+        border: 1px solid #000000 !important;
+    }
+
+    /* 右側の「＋」ボタン（赤） */
+    [data-testid="stSidebar"] button[kind="secondary"]:last-of-type {
+        background-color: #FF4B4B !important; /* 赤 */
+        border: 1px solid #000000 !important;
+    }
+
+    /* ボタンの中の記号（＋ー）を白にして目立たせる */
+    [data-testid="stSidebar"] button[kind="secondary"] * {
+        color: #FFFFFF !important;
+        fill: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+    }
+    
     /* 2. サイドバー内の入力ボックスの設定（メインエリアと同じ仕様） */
     [data-testid="stSidebar"] div[data-baseweb="input"],
     [data-testid="stSidebar"] div[data-baseweb="base-input"] {
