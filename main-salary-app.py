@@ -15,11 +15,9 @@ def init_spreadsheet(month_str):
         
         sh = gc.open("給料管理")
         
-        # 指定された月（例: 2024-03）のワークシートを探す
         try:
             worksheet = sh.worksheet(month_str)
         except gspread.exceptions.WorksheetNotFound:
-            # なければ新規作成し、ヘッダーを追加
             worksheet = sh.add_worksheet(title=month_str, rows="100", cols="10")
             header = ["日付", "出勤", "退勤", "労働(h)", "深夜(h)", "給料"]
             worksheet.append_row(header)
@@ -31,6 +29,15 @@ def init_spreadsheet(month_str):
 
 # --- 2. 画面基本設定 ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
+
+# --- 【追加】表の上のツールバーを非表示にするCSS ---
+st.markdown("""
+    <style>
+    [data-testid="stElementToolbar"] {
+        display: none;
+    }
+    </style>
+    """, unsafe_allow_stdio=False, unsafe_allow_html=True)
 
 if 'hourly_wage' not in st.session_state:
     st.session_state.hourly_wage = 1200
@@ -45,7 +52,7 @@ st.title("💰 給料管理システム")
 # --- 4. 入力セクション ---
 st.subheader("📅 勤務情報の入力")
 d = st.date_input("日付を選択", datetime.now())
-target_month = d.strftime('%Y-%m') # 保存先のシート名
+target_month = d.strftime('%Y-%m')
 
 is_holiday = jpholiday.is_holiday(d)
 is_weekend = d.weekday() >= 5 
@@ -98,7 +105,7 @@ st.metric("計算された給料", f"{salary:,} 円", f"{actual_h:.2f} 時間労
 
 # --- 6. 保存処理 ---
 if st.button("💾 スプレッドシートに保存"):
-    sheet = init_spreadsheet(target_month) # 入力した日付の月のシートに接続
+    sheet = init_spreadsheet(target_month)
     if sheet:
         new_row = [d.strftime('%Y-%m-%d'), f"{sh:02d}:{sm:02d}", f"{eh:02d}:{em:02d}", round(actual_h, 2), round(night_h, 2), salary]
         sheet.append_row(new_row)
@@ -118,9 +125,13 @@ if sheet:
         df['row_idx'] = [i + 2 for i in range(len(df))]
         df.insert(0, "選択", False)
         
+        # ツールバー非表示設定を適用したデータエディタ
         edited_df = st.data_editor(
             df,
-            column_config={"選択": st.column_config.CheckboxColumn(required=True), "row_idx": None},
+            column_config={
+                "選択": st.column_config.CheckboxColumn(required=True),
+                "row_idx": None
+            },
             disabled=[col for col in df.columns if col != "選択"],
             hide_index=True,
         )
@@ -132,7 +143,6 @@ if sheet:
                     sheet.delete_rows(r)
                 st.rerun()
 
-        # 月間集計
         st.write(f"### {target_month} 合計")
         m1, m2 = st.columns(2)
         m1.metric("支給額合計", f"{df['給料'].sum():,} 円")
