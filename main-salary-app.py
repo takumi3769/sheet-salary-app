@@ -32,102 +32,96 @@ sheet = init_spreadsheet()
 # --- 2. 画面基本設定 ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
-# --- 3. カスタムCSS（ボックスの黒色を白に強制修正版） ---
-# --- 3. カスタムCSS（メインエリアの白床・黒文字を強制復活版） ---
+# --- 3. カスタムCSS（サイドバーとメインを完全に分離・固定版） ---
 st.markdown("""
     <style>
-    /* --- 1. メインエリア全体の再設定（最優先） --- */
-    /* 背景色を明るい水色に固定 */
-    .stApp { background-color: #E0F2F7 !important; }
-
-    /* メインエリア内のすべての文字（タイトル、ラベル、入力値）を黒に強制 */
-    /* ダークモードによる白反転を強力に打ち消します */
-    [data-testid="stMain"] * {
+    /* --- 1. アプリ全体の基本設定（ダークモードの自動色変換を阻止） --- */
+    .stApp {
+        background-color: #E0F2F7 !important;
         color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
     }
 
-    /* メインエリアのすべての入力ボックス（日付、セレクトボックス）を白に強制 */
-    [data-testid="stMain"] div[data-baseweb="input"],
-    [data-testid="stMain"] div[data-baseweb="base-input"],
-    [data-testid="stMain"] div[data-baseweb="select"] > div {
-        background-color: #FFFFFF !important; /* 床を白に */
-        color: #000000 !important;           /* 文字を黒に */
-        border: 1px solid #000000 !important; /* 枠線を黒に */
-    }
-
-    /* 日付入力欄などのテキストを黒に固定 */
-    [data-testid="stMain"] input {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-    }
-
-    /* セレクトボックスの矢印アイコンなども黒に */
-    [data-testid="stMain"] svg {
-        fill: #000000 !important;
-    }
-
-
-    /* --- 2. サイドバーの設定（明るい黄色・赤青ボタンを維持） --- */
+    /* --- 2. サイドバーの設定（背景を黄色に強制） --- */
     [data-testid="stSidebar"] {
         background-color: #FFEB3B !important;
+        /* ダークモードの黒い透過レイヤーを解除 */
+        background-image: none !important;
     }
-    
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
         background-color: transparent !important;
     }
 
-    /* サイドバーの入力ボックス（白床・黒枠・黒文字） */
-    [data-testid="stSidebar"] div[data-baseweb="input"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #000000 !important;
-        border-radius: 4px !important;
-    }
-    [data-testid="stSidebar"] input {
+    /* サイドバー内の全文字を黒に固定 */
+    [data-testid="stSidebar"] * {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
-    /* ＋ーボタンの隙間なし・赤青設定 */
+    /* サイドバーの入力ボックス（白床・黒枠・黒文字） */
+    [data-testid="stSidebar"] div[data-baseweb="input"],
+    [data-testid="stSidebar"] div[data-baseweb="base-input"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #000000 !important;
+    }
+    [data-testid="stSidebar"] input {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+    }
+
+    /* ＋ーボタンの赤青・隙間なし設定 */
     [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] {
         border: none !important;
         margin: 0 !important;
         height: 100% !important;
         opacity: 1 !important;
     }
+    /* マイナス（青） */
     [data-testid="stSidebar"] button[data-testid="stNumberInputStepDown"] {
         background-color: #007BFF !important;
         border-right: 1px solid #007BFF !important;
     }
+    /* プラス（赤） */
     [data-testid="stSidebar"] button[data-testid="stNumberInputStepUp"] {
         background-color: #FF4B4B !important;
         border-left: 1px solid #FF4B4B !important;
     }
+    /* 記号（＋ー）を白に */
     [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] svg {
         fill: #FFFFFF !important;
         color: #FFFFFF !important;
     }
 
-    /* サイドバーのすべての文字を黒に固定 */
-    [data-testid="stSidebar"] * {
+    /* --- 3. メインエリアの設定（白床・黒文字を死守） --- */
+    /* タイトルやラベル等の文字を黒に */
+    [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, 
+    [data-testid="stMain"] p, [data-testid="stMain"] label, [data-testid="stMain"] span {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
+    /* メインの入力ボックス（日付・セレクトボックス）を白床に */
+    [data-testid="stMain"] div[data-baseweb="input"],
+    [data-testid="stMain"] div[data-baseweb="base-input"],
+    [data-testid="stMain"] div[data-baseweb="select"] > div {
+        background-color: #FFFFFF !important;
+        border: 1px solid #000000 !important;
+    }
+    
+    /* ボックス内の文字とアイコンを黒に */
+    [data-testid="stMain"] input, [data-testid="stMain"] div[role="listbox"] {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+    }
+    [data-testid="stMain"] svg {
+        fill: #000000 !important;
+    }
 
-    /* --- 3. その他（ボタン、注釈） --- */
-    /* 「スプレッドシートに保存」ボタン（灰色・黒文字） */
+    /* 保存ボタン（灰色） */
     [data-testid="stMain"] div.stButton > button {
         background-color: #D3D3D3 !important;
         color: #000000 !important;
         border: 1px solid #000000 !important;
-    }
-
-    /* st.info（サイドバー下の注釈ボックス）も黄色に馴染ませる */
-    [data-testid="stSidebar"] div[data-testid="stNotification"] {
-        background-color: #E6D632 !important;
-        color: #000000 !important;
-        border: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
