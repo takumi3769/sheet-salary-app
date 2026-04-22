@@ -38,6 +38,9 @@ st.markdown("""
     /* --- 1. アプリ全体の基本設定 --- */
     .stApp { background-color: #E0F2F7 !important; }
 
+    /* 文字全般 */
+    h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
+    
     /* --- 2. サイドバーの設定（枠なし・黄色背景） --- */
     [data-testid="stSidebar"] {
         background-color: #FFEB3B !important;
