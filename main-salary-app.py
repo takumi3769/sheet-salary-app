@@ -61,24 +61,22 @@ st.markdown("""
         caret-color: white !important; /* 入力カーソルも白に */
     }*/
 
-　   /* 左側の「－」ボタンを青に */
-    [data-testid="stSidebar"] button[aria-label="Decrease salary"] , /* 英語環境用 */
+　   /* --- 4. ＋－ボタンの色と記号の白固定 --- */
+    
+    /* マイナスボタン（左）を青に */
     [data-testid="stSidebar"] button[kind="secondary"]:first-of-type {
         background-color: #0000FF !important;
-        border-radius: 4px 0 0 4px !important;
+        border: none !important;
     }
 
-    /* 右側の「＋」ボタンを赤に */
-    [data-testid="stSidebar"] button[aria-label="Increase salary"] , /* 英語環境用 */
+    /* プラスボタン（右）を赤に */
     [data-testid="stSidebar"] button[kind="secondary"]:last-of-type {
         background-color: #FF0000 !important;
-        border-radius: 0 4px 4px 0 !important;
+        border: none !important;
     }
 
-    /* 5. ボタンの中の記号（＋やー）の色を白に強制 */
-    [data-testid="stSidebar"] button[kind="secondary"] p,
-    [data-testid="stSidebar"] button[kind="secondary"] span,
-    [data-testid="stSidebar"] button[kind="secondary"] svg {
+    /* ボタンの中の「＋」「－」を絶対に白くする */
+    [data-testid="stSidebar"] button[kind="secondary"] * {
         color: #FFFFFF !important;
         fill: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
