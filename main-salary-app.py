@@ -32,93 +32,76 @@ sheet = init_spreadsheet()
 # --- 2. 画面基本設定 ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
-# --- 3. カスタムCSS（サイドバーのボックスもメインと同じ白床・黒文字に設定） ---
+# --- 3. カスタムCSS（完全統合版：暗さ解消・隙間なし・赤青ボタン） ---
 st.markdown("""
     <style>
-    /* メインエリア全体の背景 */
+    /* 1. メインエリアの設定 */
     .stApp { background-color: #E0F2F7 !important; }
-
-    /* 文字全般を黒に */
-    h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
-    
-/* --- サイドバー全体の背景 --- */
-    [data-testid="stSidebar"] {
-        background-color: #FFEB3B !important;
-    }
-
-   /* --- サイドバーの入力ボックス（床は白、文字は黒、枠線あり） --- */
-    [data-testid="stSidebar"] div[data-baseweb="input"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #000000 !important;
-        border-radius: 4px !important;
-    }
-
-    /* ボックス内の文字色を黒に固定 */
-    [data-testid="stSidebar"] input {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-    }
-
-    /* --- 【最重要】＋ーボタンの強制色付け --- */
-    /* Streamlitのボタン要素を直接指定し、背景が反映されない現象を阻止します */
-    
-    /* マイナスボタン（左側）: step-down */
-    [data-testid="stSidebar"] button[data-testid="stNumberInputStepDown"] {
-        background-color: #007BFF !important; /* 青 */
-        color: #FFFFFF !important;
-        opacity: 1 !important;
-        border: 1px solid #000000 !important;
-    }
-
-    /* プラスボタン（右側）: step-up */
-    [data-testid="stSidebar"] button[data-testid="stNumberInputStepUp"] {
-        background-color: #FF4B4B !important; /* 赤 */
-        color: #FFFFFF !important;
-        opacity: 1 !important;
-        border: 1px solid #000000 !important;
-    }
-
-    /* ボタンの中の「＋」「ー」記号を白に固定 */
-    [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] svg {
-        fill: #FFFFFF !important;
-        color: #FFFFFF !important;
-    }
-
-
-    /* メインエリアの設定（既存通り） */
-    [data-testid="stMain"] div[data-baseweb="input"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #000000 !important;
-    }
     [data-testid="stMain"] * {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
-
-    /* 3. サイドバー内の入力文字、ラベル、その他すべてを黒に強制 */
-    [data-testid="stSidebar"] * {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-    }
-
-    /* --- メインエリアの入力欄の設定（床は白、文字は黒） --- */
     [data-testid="stMain"] div[data-baseweb="input"],
     [data-testid="stMain"] div[data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
         border: 1px solid #000000 !important;
     }
 
-    [data-testid="stMain"] div[data-baseweb="select"] * {
+    /* 2. サイドバー全体の背景（暗くなるのを防ぐ最強設定） */
+    [data-testid="stSidebar"], 
+    [data-testid="stSidebarNav"], 
+    [data-testid="stSidebar"] > div:first-child, 
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        background-color: #FFEB3B !important;
+        background-image: none !important;
+        filter: brightness(100%) !important; /* ダークモードのフィルターを解除 */
+    }
+
+    /* 3. サイドバーの入力ボックス（白床・黒枠・黒文字） */
+    [data-testid="stSidebar"] div[data-baseweb="input"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #000000 !important;
+        border-radius: 4px !important;
+    }
+    [data-testid="stSidebar"] input {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
-    [data-testid="stMain"] input {
+    /* 4. ＋ーボタンの強制色付けと隙間解消 */
+    /* 共通：枠線を消して密着させる */
+    [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] {
+        border: none !important;
+        margin: 0 !important;
+        height: 100% !important;
+        opacity: 1 !important;
+    }
+
+    /* マイナスボタン（左・青） */
+    [data-testid="stSidebar"] button[data-testid="stNumberInputStepDown"] {
+        background-color: #007BFF !important;
+        border-right: 1px solid #007BFF !important; /* 隙間埋め */
+    }
+
+    /* プラスボタン（右・赤） */
+    [data-testid="stSidebar"] button[data-testid="stNumberInputStepUp"] {
+        background-color: #FF4B4B !important;
+        border-left: 1px solid #FF4B4B !important; /* 隙間埋め */
+    }
+
+    /* 記号（＋ー）を白に */
+    [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] svg {
+        fill: #FFFFFF !important;
+        color: #FFFFFF !important;
+    }
+
+    /* 5. サイドバーのすべての文字を黒に固定 */
+    [data-testid="stSidebar"] * {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
-    /* 「スプレッドシートに保存」ボタンの設定 */
+    /* スプレッドシート保存ボタン（灰色） */
     div.stButton > button {
         background-color: #D3D3D3 !important;
         color: #000000 !important;
@@ -126,7 +109,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
 # --- 4. サイドバー：時給設定 ---
 if 'hourly_wage' not in st.session_state:
     st.session_state.hourly_wage = 1200
