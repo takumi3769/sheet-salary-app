@@ -33,95 +33,81 @@ sheet = init_spreadsheet()
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
 # --- 3. カスタムCSS（サイドバーとメインを完全に分離・固定版） ---
+# --- 3. カスタムCSS（サイドバーの外枠消去＆メイン文字黒固定） ---
 st.markdown("""
     <style>
-    /* --- 1. アプリ全体の基本設定（ダークモードの自動色変換を阻止） --- */
-    .stApp {
-        background-color: #E0F2F7 !important;
-        color: #000000 !important;
-    }
+    /* --- 1. アプリ全体の基本設定 --- */
+    .stApp { background-color: #E0F2F7 !important; }
 
-    /* --- 2. サイドバーの設定（背景を黄色に強制） --- */
+    /* --- 2. サイドバーの設定 --- */
     [data-testid="stSidebar"] {
         background-color: #FFEB3B !important;
-        /* ダークモードの黒い透過レイヤーを解除 */
         background-image: none !important;
     }
-    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+
+    /* サイドバーの入力ボックス全体の枠線を消す */
+    [data-testid="stSidebar"] div[data-baseweb="input"] {
+        background-color: #FFFFFF !important;
+        border: none !important; /* 外枠を削除 */
+        box-shadow: none !important; /* 影も削除 */
+        border-radius: 4px !important;
+    }
+
+    /* ボックス内部の境界線も完全に消去 */
+    [data-testid="stSidebar"] div[data-baseweb="base-input"],
+    [data-testid="stSidebar"] div[data-baseweb="input"] > div {
+        border: none !important;
         background-color: transparent !important;
     }
 
-    /* サイドバー内の全文字を黒に固定 */
-    [data-testid="stSidebar"] * {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-    }
-
-    /* サイドバーの入力ボックス（白床・黒枠・黒文字） */
-    [data-testid="stSidebar"] div[data-baseweb="input"],
-    [data-testid="stSidebar"] div[data-baseweb="base-input"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #000000 !important;
-    }
     [data-testid="stSidebar"] input {
-        background-color: #FFFFFF !important;
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
-    /* ＋ーボタンの赤青・隙間なし設定 */
+    /* ＋ーボタンの隙間と線をなくす */
     [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] {
         border: none !important;
         margin: 0 !important;
         height: 100% !important;
         opacity: 1 !important;
     }
-    /* マイナス（青） */
     [data-testid="stSidebar"] button[data-testid="stNumberInputStepDown"] {
         background-color: #007BFF !important;
-        border-right: 1px solid #007BFF !important;
     }
-    /* プラス（赤） */
     [data-testid="stSidebar"] button[data-testid="stNumberInputStepUp"] {
         background-color: #FF4B4B !important;
-        border-left: 1px solid #FF4B4B !important;
     }
+    
     /* 記号（＋ー）を白に */
     [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] svg {
         fill: #FFFFFF !important;
         color: #FFFFFF !important;
     }
 
-    /* --- 3. メインエリアの設定（白床・黒文字を死守） --- */
-    /* タイトルやラベル等の文字を黒に */
-    [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, 
-    [data-testid="stMain"] p, [data-testid="stMain"] label, [data-testid="stMain"] span {
+    /* --- 3. メインエリアの設定（文字を黒に強制） --- */
+    /* 全ての要素をターゲットに黒文字を叩き込む */
+    [data-testid="stMain"] * {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
-    /* メインの入力ボックス（日付・セレクトボックス）を白床に */
+    /* メインの入力欄の床を白に固定 */
     [data-testid="stMain"] div[data-baseweb="input"],
     [data-testid="stMain"] div[data-baseweb="base-input"],
     [data-testid="stMain"] div[data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
         border: 1px solid #000000 !important;
     }
-    
-    /* ボックス内の文字とアイコンを黒に */
-    [data-testid="stMain"] input, [data-testid="stMain"] div[role="listbox"] {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-    }
+
+    /* セレクトボックス内の矢印などを黒に */
     [data-testid="stMain"] svg {
         fill: #000000 !important;
     }
 
-    /* 保存ボタン（灰色） */
-    [data-testid="stMain"] div.stButton > button {
-        background-color: #D3D3D3 !important;
+    /* ラジオボタンの文字も黒に */
+    [data-testid="stMain"] div[data-testid="stMarkdownContainer"] p {
         color: #000000 !important;
-        border: 1px solid #000000 !important;
     }
     </style>
 """, unsafe_allow_html=True)
