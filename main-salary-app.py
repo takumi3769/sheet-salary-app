@@ -79,6 +79,8 @@ with col_end:
     with c4: em = st.selectbox("分", list(range(60)), index=0, key="em")
 
 # 休憩設定：ありを選んだ時だけ詳細設定を表示
+st.write("**休憩の有無**")
+break_status = st.radio("休憩の有無を選択", ["なし", "あり"], horizontal=True, label_visibility="collapsed")
 
 br_h, br_m = 0, 0
 if break_status == "あり":
