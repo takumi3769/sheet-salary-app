@@ -33,6 +33,7 @@ st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered
 # CSS: 表の上のツールバー（虫眼鏡、ダウンロード等）を非表示にする
 st.markdown("""
     <style>
+    
     [data-testid="stElementToolbar"] {
         display: none;
     }
@@ -41,6 +42,16 @@ st.markdown("""
 
     /* 文字全般 */
     h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
+
+    /* カレンダーのヘッダー（月移動ボタンがある部分）を左右反転させる */
+    [data-testid="stDatePickerHeader"] {
+        flex-direction: row-reverse !important;
+    }
+    
+    /* ボタン自体の向き（矢印の形）も反転させて直感に合わせる */
+    [data-testid="stDatePickerHeader"] button {
+        transform: scaleX(-1);
+    }
     
     /* --- 2. サイドバーの設定（枠なし・黄色背景） --- */
     [data-testid="stSidebar"] {
