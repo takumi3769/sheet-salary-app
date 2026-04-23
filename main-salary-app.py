@@ -9,7 +9,6 @@ from google.oauth2.service_account import Credentials
 def init_spreadsheet_service():
     scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
     try:
-        # Streamlit Secretsから認証情報を取得
         creds_info = st.secrets["gcp_service_account"]
         credentials = Credentials.from_service_account_info(creds_info, scopes=scopes)
         gc = gspread.authorize(credentials)
@@ -23,7 +22,6 @@ def get_worksheet(sh, month_str):
     try:
         return sh.worksheet(month_str)
     except gspread.exceptions.WorksheetNotFound:
-        # シートが存在しない場合は新規作成（ヘッダー付き）
         worksheet = sh.add_worksheet(title=month_str, rows="100", cols="10")
         header = ["日付", "出勤", "退勤", "休憩時間", "労働(h)", "深夜(h)", "給料"]
         worksheet.append_row(header)
@@ -113,11 +111,10 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
 if 'hourly_wage' not in st.session_state:
     st.session_state.hourly_wage = 1200
 
-# --- 3. サイドバー：設定 ---
+# --- 3. サイドバー ---
 with st.sidebar:
     st.header("⚙️ 設定")
     st.session_state.hourly_wage = st.number_input("基本時給(円)", value=st.session_state.hourly_wage, step=10)
@@ -150,13 +147,13 @@ with col_end:
     with c4: em = st.selectbox("分", list(range(60)), index=0, key="em")
 
 st.write("**休憩の有無**")
-break_status = st.radio("休憩の有無を選択", ["なし", "あり"], horizontal=True, label_visibility="collapsed")
+break_status = st.radio("休憩を選択", ["なし", "あり"], horizontal=True, label_visibility="collapsed")
 
 br_h, br_m = 0, 0
 if break_status == "あり":
     col_br1, col_br2 = st.columns(2)
-    with col_br1: br_h = st.selectbox("休憩（時間）", list(range(11)), index=0, key="br_h")
-    with col_br2: br_m = st.selectbox("休憩（分）", list(range(60)), index=0, key="br_m")
+    with col_br1: br_h = st.selectbox("休憩（時間）", list(range(10)), index=1, key="br_h")
+    with col_br2: br_m = st.selectbox("休憩（分）", [0, 15, 30, 45], index=0, key="br_m")
 
 # --- 5. 計算ロジック ---
 def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage):
@@ -197,12 +194,10 @@ if st.button("💾 スプレッドシートに保存"):
         break_str = f"{br_h}h {br_m}m" if break_status == "あり" else "なし"
         new_row = [d.strftime('%Y-%m-%d'), f"{sh:02d}:{sm:02d}", f"{eh:02d}:{em:02d}", break_str, round(actual_h, 2), round(night_h, 2), salary]
         sheet.append_row(new_row)
-        st.success(f"シート「{target_month}」に保存しました！")
+        st.success(f"保存しました！")
         st.rerun()
-    else:
-        st.error("スプレッドシートが見つかりません。")
 
-# --- 7. 履歴詳細・削除 ---
+# --- 7. 履歴詳細 ---
 st.divider()
 st.subheader(f"📊 {target_month} の履歴詳細")
 if sh_main:
@@ -210,9 +205,10 @@ if sh_main:
     data = sheet.get_all_records()
     if data:
         df = pd.DataFrame(data)
-        # 型変換（エラー回避用）
-        df['労働(h)'] = pd.to_numeric(df['労働(h)'], errors='coerce').fillna(0)
+        
+        # 【最重要】読み込んだデータを数値に変換
         df['給料'] = pd.to_numeric(df['給料'], errors='coerce').fillna(0)
+        df['労働(h)'] = pd.to_numeric(df['労働(h)'], errors='coerce').fillna(0)
         
         df['row_idx'] = [i + 2 for i in range(len(df))]
         df.insert(0, "選択", False)
@@ -222,7 +218,7 @@ if sh_main:
             column_config={"選択": st.column_config.CheckboxColumn(required=True), "row_idx": None}, 
             disabled=[col for col in df.columns if col != "選択"], 
             hide_index=True, 
-            key="current_editor"
+            key="cur_edt"
         )
         
         if not edited_df[edited_df["選択"]].empty:
@@ -235,7 +231,7 @@ if sh_main:
         m1.metric(f"{target_month} 支給額合計", f"{int(df['給料'].sum()):,} 円")
         m2.metric(f"{target_month} 労働合計", f"{df['労働(h)'].sum():.1f} h")
     else:
-        st.info(f"{target_month} のデータはまだありません。")
+        st.info("データがありません。")
 
 # --- 8. 月別収入一覧 ---
 st.divider()
@@ -247,7 +243,7 @@ if sh_main:
             content = s.get_all_records()
             if content:
                 temp_df = pd.DataFrame(content)
-                # 型変換（エラー回避用）
+                # 【最重要】ここでも数値を変換
                 temp_df['給料'] = pd.to_numeric(temp_df['給料'], errors='coerce').fillna(0)
                 temp_df['労働(h)'] = pd.to_numeric(temp_df['労働(h)'], errors='coerce').fillna(0)
                 
@@ -256,7 +252,6 @@ if sh_main:
                     "支給額合計": temp_df['給料'].sum(), 
                     "労働時間合計": round(temp_df['労働(h)'].sum(), 1)
                 })
-    
     if summary_data:
         summary_df = pd.DataFrame(summary_data).sort_values("月", ascending=False)
         st.dataframe(
@@ -268,5 +263,3 @@ if sh_main:
             hide_index=True, 
             use_container_width=True
         )
-    else:
-        st.write("集計可能な過去データがありません。")
