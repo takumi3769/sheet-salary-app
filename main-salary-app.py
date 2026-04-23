@@ -113,6 +113,7 @@ st.markdown("""
         border: 1px solid #000000 !important;
     }
     </style>
+    """, unsafe_allow_html=True)
 # --- 3. サイドバー ---
 with st.sidebar:
     st.header("⚙️ 設定")
