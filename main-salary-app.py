@@ -43,12 +43,17 @@ st.markdown("""
     /* 文字全般 */
     h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
 
-   /* 【カレンダー反転】左ボタンで月が進むように設定 */
-    div[data-baseweb="datepicker"] > div > div > div > div[style*="flex-direction: row"] {
+   * 2. 【最優先】カレンダーのヘッダーを反転 */
+    /* 複数のセレクタ候補を並べて、どれかが当たるようにします */
+    div[data-baseweb="datepicker"] [style*="flex-direction: row"],
+    div[role="dialog"] [style*="flex-direction: row"],
+    .stDatePicker div[style*="flex-direction: row"] {
         flex-direction: row-reverse !important;
     }
-    /* 矢印アイコンも鏡合わせに反転 */
-    div[data-baseweb="datepicker"] button[kind="secondary"] {
+
+    /* 3. 【最優先】矢印ボタンの向きを反転 */
+    div[data-baseweb="datepicker"] button[kind="secondary"],
+    div[role="dialog"] button[kind="secondary"] {
         transform: scaleX(-1) !important;
     }
     
