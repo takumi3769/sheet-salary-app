@@ -161,7 +161,7 @@ br_h, br_m = 0, 0
 if break_status == "あり":
     col_br1, col_br2 = st.columns(2)
     # 休憩時間をセレクトボックスで1分単位で選択
-    br_h = col_br1.selectbox("休憩（時間）", list(range(11)), index=1, key="br_h")
+    br_h = col_br1.selectbox("休憩（時間）", list(range(11)), index=0, key="br_h")
     br_m = col_br2.selectbox("休憩（分）", list(range(60)), index=0, key="br_m")
 
 # --- 5. 計算ロジック ---
