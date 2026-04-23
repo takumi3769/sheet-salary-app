@@ -79,14 +79,12 @@ with col_end:
     with c4: em = st.selectbox("分", list(range(60)), index=0, key="em")
 
 # 休憩設定：ありを選んだ時だけ詳細設定を表示
-st.write("**休憩の有無**")
-break_status = st.radio("休憩の有無を選択", ["なし", "あり"], horizontal=True, label_visibility="collapsed")
 
 br_h, br_m = 0, 0
 if break_status == "あり":
     col_br1, col_br2 = st.columns(2)
     with col_br1:
-        br_h = st.selectbox("休憩（時間）", list(range(11)), index=1, key="br_h")
+        br_h = st.selectbox("休憩（時間）", list(range(11)), index=0, key="br_h")
     with col_br2:
         br_m = st.selectbox("休憩（分）", list(range(60)), index=0, key="br_m")
 
