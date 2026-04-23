@@ -225,6 +225,10 @@ if sh_main:
     data = sheet.get_all_records()
     if data:
         df = pd.DataFrame(data)
+
+        df['労働(h)'] = pd.to_numeric(df['労働(h)'], errors='coerce').fillna(0)
+        df['給料'] = pd.to_numeric(df['給料'], errors='coerce').fillna(0)
+        
         # スプレッドシートの行番号を保持（削除用）
         df['row_idx'] = [i + 2 for i in range(len(df))]
         df.insert(0, "選択", False)
