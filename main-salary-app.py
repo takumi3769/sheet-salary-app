@@ -43,14 +43,13 @@ st.markdown("""
     /* 文字全般 */
     h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
 
-    /* カレンダーのヘッダー（月移動ボタンがある部分）を左右反転させる */
-    [data-testid="stDatePickerHeader"] {
+   /* 【カレンダー反転】左ボタンで月が進むように設定 */
+    div[data-baseweb="datepicker"] > div > div > div > div[style*="flex-direction: row"] {
         flex-direction: row-reverse !important;
     }
-    
-    /* ボタン自体の向き（矢印の形）も反転させて直感に合わせる */
-    [data-testid="stDatePickerHeader"] button {
-        transform: scaleX(-1);
+    /* 矢印アイコンも鏡合わせに反転 */
+    div[data-baseweb="datepicker"] button[kind="secondary"] {
+        transform: scaleX(-1) !important;
     }
     
     /* --- 2. サイドバーの設定（枠なし・黄色背景） --- */
