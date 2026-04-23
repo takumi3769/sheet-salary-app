@@ -23,13 +23,13 @@ def get_worksheet(sh, month_str):
         return sh.worksheet(month_str)
     except gspread.exceptions.WorksheetNotFound:
         worksheet = sh.add_worksheet(title=month_str, rows="100", cols="10")
+        # ヘッダーを定義（7項目）
         header = ["日付", "出勤", "退勤", "休憩時間", "労働(h)", "深夜(h)", "給料"]
         worksheet.append_row(header)
         return worksheet
 
 # --- 2. 画面基本設定 ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
-
 # CSS: 表の上のツールバー（虫眼鏡、ダウンロード等）を非表示にする
 st.markdown("""
     <style>
@@ -192,7 +192,16 @@ if st.button("💾 スプレッドシートに保存"):
     if sh_main:
         sheet = get_worksheet(sh_main, target_month)
         break_str = f"{br_h}h {br_m}m" if break_status == "あり" else "なし"
-        new_row = [d.strftime('%Y-%m-%d'), f"{sh:02d}:{sm:02d}", f"{eh:02d}:{em:02d}", break_str, round(actual_h, 2), round(night_h, 2), salary]
+        # 確実にヘッダーと同じ7項目を順番通りに並べる
+        new_row = [
+            d.strftime('%Y-%m-%d'), 
+            f"{sh:02d}:{sm:02d}", 
+            f"{eh:02d}:{em:02d}", 
+            break_str,            # D列: 休憩時間
+            round(actual_h, 2),    # E列: 労働(h)
+            round(night_h, 2),     # F列: 深夜(h)
+            salary                 # G列: 給料
+        ]
         sheet.append_row(new_row)
         st.success(f"保存しました！")
         st.rerun()
@@ -206,9 +215,11 @@ if sh_main:
     if data:
         df = pd.DataFrame(data)
         
-        # 【最重要】読み込んだデータを数値に変換
-        df['給料'] = pd.to_numeric(df['給料'], errors='coerce').fillna(0)
-        df['労働(h)'] = pd.to_numeric(df['労働(h)'], errors='coerce').fillna(0)
+        # 読み込んだデータの列名を整理し、数値を強制変換
+        if '給料' in df.columns:
+            df['給料'] = pd.to_numeric(df['給料'], errors='coerce').fillna(0)
+        if '労働(h)' in df.columns:
+            df['労働(h)'] = pd.to_numeric(df['労働(h)'], errors='coerce').fillna(0)
         
         df['row_idx'] = [i + 2 for i in range(len(df))]
         df.insert(0, "選択", False)
@@ -228,8 +239,8 @@ if sh_main:
                 st.rerun()
         
         m1, m2 = st.columns(2)
-        m1.metric(f"{target_month} 支給額合計", f"{int(df['給料'].sum()):,} 円")
-        m2.metric(f"{target_month} 労働合計", f"{df['労働(h)'].sum():.1f} h")
+        m1.metric("支給額合計", f"{int(df['給料'].sum()):,} 円")
+        m2.metric("労働合計", f"{df['労働(h)'].sum():.1f} h")
     else:
         st.info("データがありません。")
 
@@ -243,7 +254,6 @@ if sh_main:
             content = s.get_all_records()
             if content:
                 temp_df = pd.DataFrame(content)
-                # 【最重要】ここでも数値を変換
                 temp_df['給料'] = pd.to_numeric(temp_df['給料'], errors='coerce').fillna(0)
                 temp_df['労働(h)'] = pd.to_numeric(temp_df['労働(h)'], errors='coerce').fillna(0)
                 
