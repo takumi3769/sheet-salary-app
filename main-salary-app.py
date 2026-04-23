@@ -30,10 +30,12 @@ def get_worksheet(sh, month_str):
 
 # --- 2. 画面基本設定 ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
+
+if 'hourly_wage' not in st.session_state:
+    st.session_state.hourly_wage = 1200
 # CSS: 表の上のツールバー（虫眼鏡、ダウンロード等）を非表示にする
 st.markdown("""
     <style>
-    
     [data-testid="stElementToolbar"] {
         display: none;
     }
@@ -111,10 +113,6 @@ st.markdown("""
         border: 1px solid #000000 !important;
     }
     </style>
-""", unsafe_allow_html=True)
-if 'hourly_wage' not in st.session_state:
-    st.session_state.hourly_wage = 1200
-
 # --- 3. サイドバー ---
 with st.sidebar:
     st.header("⚙️ 設定")
@@ -128,12 +126,22 @@ st.subheader("📅 勤務情報の入力")
 d = st.date_input("日付を選択", datetime.now())
 target_month = d.strftime('%Y-%m')
 
+# 特定日手当のチェックボックス
+special_adjustment = st.checkbox("特定日手当を適用する (+50円)")
+
+# 手当の計算ロジック（重複させない）
 is_holiday = jpholiday.is_holiday(d)
 is_weekend = d.weekday() >= 5 
-base_wage_today = st.session_state.hourly_wage + 50 if (is_holiday or is_weekend) else st.session_state.hourly_wage
 
-if is_holiday or is_weekend:
-    st.warning(f"📅 手当適用日：ベース時給 {base_wage_today}円")
+base_wage_today = st.session_state.hourly_wage
+# 土日祝、またはチェックが入っている場合に+50円（どちらも該当しても+50円のみ）
+if (is_holiday or is_weekend) or special_adjustment:
+    base_wage_today += 50
+    
+    if is_holiday or is_weekend:
+        st.warning(f"📅 手当適用日（土日祝）：ベース時給 {base_wage_today}円")
+    else:
+        st.info(f"✨ 手当適用日（特定日）：ベース時給 {base_wage_today}円")
 
 col_start, col_end = st.columns(2)
 with col_start:
