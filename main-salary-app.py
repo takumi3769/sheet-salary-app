@@ -234,8 +234,13 @@ if sh_main:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-        # メトリクス表示部分（修正済み：変な文字が出ないようにif文を分離）
-        m1, m2, m3, m4 = st.columns(4)
+        # 土日祝手当が適用された時間の合計を計算
+        holiday_work_total = 0
+        if '手当適用' in df.columns and '労働(h)' in df.columns:
+            holiday_work_total = df[df['手当適用'] == 'Yes']['労働(h)'].sum()
+
+        # メトリクス表示部分
+        m1, m2, m3, m4, m5 = st.columns(5)
         m1.metric("支給額合計", f"{int(df[col_name].sum()):,}円")
         
         if '基本給(10円切上)' in df.columns:
@@ -245,6 +250,7 @@ if sh_main:
             
         m3.metric("労働合計", format_hours(df['労働(h)'].sum()))
         m4.metric("深夜合計", format_hours(df['深夜(h)'].sum()))
+        m5.metric("土日祝合計", format_hours(holiday_work_total)) # 追加項目
 
         df_disp = df.copy()
         df_disp['row_idx'] = [i + 2 for i in range(len(df))]
