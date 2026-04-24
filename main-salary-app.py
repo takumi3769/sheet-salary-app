@@ -27,10 +27,17 @@ def get_worksheet(sh, month_str):
         worksheet.append_row(header)
         return worksheet
 
-# --- 2. 画面基本設定 ---
+# --- 2. 補助関数（HH:MM形式への変換） ---
+def format_hours(hours_float):
+    """小数形式の時間を HH:MM 形式の文字列に変換する"""
+    total_seconds = int(hours_float * 3600)
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    return f"{hours}:{minutes:02d}"
+
+# --- 3. 画面基本設定 ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
-# CSS設定
 # CSS: 表の上のツールバー（虫眼鏡、ダウンロード等）を非表示にする
 st.markdown("""
     <style>
@@ -116,7 +123,6 @@ st.markdown("""
 if 'hourly_wage' not in st.session_state:
     st.session_state.hourly_wage = 1200
 
-# --- 3. サイドバー ---
 with st.sidebar:
     st.header("⚙️ 設定")
     st.session_state.hourly_wage = st.number_input("基本時給(円)", value=st.session_state.hourly_wage, step=10)
@@ -133,7 +139,6 @@ special_adjustment = st.checkbox("特定日手当を適用する (+50円)")
 is_holiday = jpholiday.is_holiday(d)
 is_weekend = d.weekday() >= 5 
 
-# 基本時給に手当を加算した「今日の時給」を決定
 base_wage_today = st.session_state.hourly_wage
 if (is_holiday or is_weekend) or special_adjustment:
     base_wage_today += 50
@@ -148,13 +153,11 @@ with col_start:
 with col_end:
     st.write("**退勤**")
     c3, c4 = st.columns(2)
-    # 29時まで対応
     eh = c3.selectbox("時", list(range(30)), index=22, key="eh")
     em = c4.selectbox("分", list(range(60)), index=0, key="em")
 
 st.write("**休憩の有無**")
 break_status = st.radio("休憩を選択", ["なし", "あり"], horizontal=True, label_visibility="collapsed")
-
 br_h, br_m = 0, 0
 if break_status == "あり":
     col_br1, col_br2 = st.columns(2)
@@ -164,8 +167,6 @@ if break_status == "あり":
 # --- 5. 計算ロジック ---
 def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage):
     start_dt = datetime.combine(d, time(sh, sm))
-    
-    # 退勤日時の計算（24時以降対応）
     if eh >= 24:
         end_dt = datetime.combine(d + timedelta(days=1), time(eh - 24, em))
     else:
@@ -175,12 +176,9 @@ def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage):
     
     total_salary, work_minutes, night_minutes = 0.0, 0, 0
     curr = start_dt
-    
-    # 1分刻みで給与計算
     while curr < end_dt:
         work_minutes += 1
-        # 深夜時間帯 (22:00 - 05:00) 
-        # 手当込みの時給(base_wage)を先に適用し、その1.25倍を計算
+        # 深夜時間帯は、(手当込み時給 × 1.25) で計算
         if curr.hour >= 22 or curr.hour < 5:
             night_minutes += 1
             total_salary += (base_wage * 1.25) / 60.0
@@ -188,7 +186,6 @@ def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage):
             total_salary += base_wage / 60.0
         curr += timedelta(minutes=1)
     
-    # 休憩の差し引き
     break_total_min = (bh * 60) + bm
     if break_total_min > 0 and work_minutes > 0:
         actual_work_min = max(0, work_minutes - break_total_min)
@@ -202,22 +199,14 @@ def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage):
 actual_h, night_h, salary = calculate_salary(d, sh, sm, eh, em, br_h, br_m, base_wage_today)
 
 st.divider()
-st.metric("計算された給料", f"{salary:,} 円", f"{actual_h:.2f} 時間労働")
+st.metric("計算された給料", f"{salary:,} 円", f"{format_hours(actual_h)} 労働")
 
 # --- 6. 保存処理 ---
 if st.button("💾 スプレッドシートに保存"):
     if sh_main:
         sheet = get_worksheet(sh_main, target_month)
         break_str = f"{br_h}h {br_m}m" if break_status == "あり" else "なし"
-        new_row = [
-            d.strftime('%Y-%m-%d'), 
-            f"{sh:02d}:{sm:02d}", 
-            f"{eh:02d}:{em:02d}", 
-            break_str, 
-            round(actual_h, 2), 
-            round(night_h, 2), 
-            salary
-        ]
+        new_row = [d.strftime('%Y-%m-%d'), f"{sh:02d}:{sm:02d}", f"{eh:02d}:{em:02d}", break_str, round(actual_h, 2), round(night_h, 2), salary]
         sheet.append_row(new_row)
         st.success(f"保存しました！")
         st.rerun()
@@ -230,32 +219,34 @@ if sh_main:
     data = sheet.get_all_records()
     if data:
         df = pd.DataFrame(data)
-        if '給料' in df.columns:
-            df['給料'] = pd.to_numeric(df['給料'], errors='coerce').fillna(0)
-        if '労働(h)' in df.columns:
-            df['労働(h)'] = pd.to_numeric(df['労働(h)'], errors='coerce').fillna(0)
+        if '給料' in df.columns: df['給料'] = pd.to_numeric(df['給料'], errors='coerce').fillna(0)
+        if '労働(h)' in df.columns: df['労働(h)'] = pd.to_numeric(df['労働(h)'], errors='coerce').fillna(0)
         
         df['row_idx'] = [i + 2 for i in range(len(df))]
         df.insert(0, "選択", False)
         
+        # 表示用に労働(h)をHH:MMに変換した列を作成
+        df_display = df.copy()
+        df_display['労働時間'] = df_display['労働(h)'].apply(format_hours)
+        
+        # 元の労働(h)列は隠して表示
         edited_df = st.data_editor(
-            df, 
+            df_display.drop(columns=['労働(h)']), 
             column_config={"選択": st.column_config.CheckboxColumn(required=True), "row_idx": None}, 
-            disabled=[col for col in df.columns if col != "選択"], 
-            hide_index=True, key="cur_edt"
+            disabled=[col for col in df_display.columns if col != "選択"], 
+            hide_index=True, 
+            key="cur_edt"
         )
         
         if not edited_df[edited_df["選択"]].empty:
             if st.button("🗑️ 選択した行を削除", type="primary"):
-                rows_to_delete = sorted(edited_df[edited_df["選択"]]["row_idx"].tolist(), reverse=True)
-                for r in rows_to_delete: sheet.delete_rows(r)
+                for r in sorted(edited_df[edited_df["選択"]]["row_idx"].tolist(), reverse=True): sheet.delete_rows(r)
                 st.rerun()
         
         m1, m2 = st.columns(2)
         m1.metric("支給額合計", f"{int(df['給料'].sum()):,} 円")
-        m2.metric("労働合計", f"{df['労働(h)'].sum():.1f} h")
-    else:
-        st.info("データがありません。")
+        m2.metric("労働合計", format_hours(df['労働(h)'].sum()))
+    else: st.info("データがありません。")
 
 # --- 8. 月別収入一覧 ---
 st.divider()
@@ -267,20 +258,17 @@ if sh_main:
             content = s.get_all_records()
             if content:
                 temp_df = pd.DataFrame(content)
-                temp_df['給料'] = pd.to_numeric(temp_df['給料'], errors='coerce').fillna(0)
-                temp_df['労働(h)'] = pd.to_numeric(temp_df['労働(h)'], errors='coerce').fillna(0)
+                total_h = pd.to_numeric(temp_df['労働(h)'], errors='coerce').sum()
                 summary_data.append({
                     "月": s.title, 
-                    "支給額合計": temp_df['給料'].sum(), 
-                    "労働時間合計": round(temp_df['労働(h)'].sum(), 1)
+                    "支給額合計": pd.to_numeric(temp_df['給料'], errors='coerce').sum(), 
+                    "労働時間合計": format_hours(total_h)
                 })
     if summary_data:
         summary_df = pd.DataFrame(summary_data).sort_values("月", ascending=False)
         st.dataframe(
             summary_df, 
-            column_config={
-                "支給額合計": st.column_config.NumberColumn(format="%d 円"), 
-                "労働時間合計": st.column_config.NumberColumn(format="%.1f h")
-            }, 
-            hide_index=True, use_container_width=True
+            column_config={"支給額合計": st.column_config.NumberColumn(format="%d 円")}, 
+            hide_index=True, 
+            use_container_width=True
         )
