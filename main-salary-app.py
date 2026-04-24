@@ -207,7 +207,7 @@ def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage, has_premium):
     h_night = floor_delta(night_minutes / 60.0)
     
     b_pay = ceil_10(base_wage * h_work)
-    n_prem = ceil_1(base_wage * 0.25 * h_night)
+    n_prem = (base_wage * 0.25 * h_night)
     e_allow = ceil_1(50 * h_work) if has_premium else 0
     
     return h_work, h_night, b_pay, n_prem, e_allow, (b_pay + n_prem + e_allow)
