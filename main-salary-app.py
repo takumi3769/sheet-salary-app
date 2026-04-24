@@ -22,14 +22,12 @@ def get_worksheet(sh, month_str):
     try:
         return sh.worksheet(month_str)
     except gspread.exceptions.WorksheetNotFound:
-        # 新規作成時は12列（余裕を持たせて）作成
         worksheet = sh.add_worksheet(title=month_str, rows="100", cols="12")
-        # ヘッダーに「手当適用」を追加して集計しやすくする
         header = ["日付", "出勤", "退勤", "休憩時間", "労働(h)", "深夜(h)", "給料", "手当適用"]
         worksheet.append_row(header)
         return worksheet
 
-# --- 2. 補助関数（HH:MM形式への変換） ---
+# --- 2. 補助関数 ---
 def format_hours(hours_float):
     """小数形式の時間を HH:MM 形式の文字列に変換する"""
     if pd.isna(hours_float): return "0:00"
@@ -38,7 +36,7 @@ def format_hours(hours_float):
     minutes = (total_seconds % 3600) // 60
     return f"{hours}:{minutes:02d}"
 
-# --- 3. 画面基本設定 & カスタムCSS ---
+# --- 3. 画面基本設定 ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
 # CSS: 表の上のツールバー（虫眼鏡、ダウンロード等）を非表示にする
@@ -122,6 +120,7 @@ st.markdown("""
     }
     </style>
     """, unsafe_allow_html=True)
+
 if 'hourly_wage' not in st.session_state:
     st.session_state.hourly_wage = 1200
 
@@ -140,7 +139,6 @@ target_month = d.strftime('%Y-%m')
 special_adjustment = st.checkbox("特定日手当を適用する (+50円)")
 is_holiday = jpholiday.is_holiday(d)
 is_weekend = d.weekday() >= 5 
-# 手当適用の有無
 apply_premium = (is_holiday or is_weekend) or special_adjustment
 
 base_wage_today = st.session_state.hourly_wage
@@ -175,14 +173,12 @@ def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage):
         end_dt = datetime.combine(d + timedelta(days=1), time(eh - 24, em))
     else:
         end_dt = datetime.combine(d, time(eh, em))
-        if end_dt <= start_dt:
-            end_dt += timedelta(days=1)
+        if end_dt <= start_dt: end_dt += timedelta(days=1)
     
     total_salary, work_minutes, night_minutes = 0.0, 0, 0
     curr = start_dt
     while curr < end_dt:
         work_minutes += 1
-        # 深夜帯(22-5時)判定：ベース時給(手当込) × 1.25
         if curr.hour >= 22 or curr.hour < 5:
             night_minutes += 1
             total_salary += (base_wage * 1.25) / 60.0
@@ -227,40 +223,50 @@ if sh_main:
     data = sheet.get_all_records()
     if data:
         df = pd.DataFrame(data)
+        # 列名をクリーニング（空白削除）
+        df.columns = [c.strip() for c in df.columns]
+
+        # 数値変換
         for col in ['給料', '労働(h)', '深夜(h)']:
-            if col in df.columns: df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
         df['row_idx'] = [i + 2 for i in range(len(df))]
         df.insert(0, "選択", False)
         
-        # 集計計算
-        total_salary = int(df['給料'].sum())
-        total_work_h = df['労働(h)'].sum()
-        total_night_h = df['深夜(h)'].sum()
-        total_prem_h = df[df['手当適用']=="Yes"]['労働(h)'].sum() if '手当適用' in df.columns else 0
+        # 手当日合計の計算（Yesが含まれる行を判定）
+        if '手当適用' in df.columns:
+            total_prem_h = df[df['手当適用'].astype(str).str.contains("Yes", case=False, na=False)]['労働(h)'].sum()
+        else:
+            total_prem_h = 0
 
-        # 四連メトリクス表示
+        # メトリクス表示
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("支給額合計", f"{total_salary:,}円")
-        m2.metric("労働合計", format_hours(total_work_h))
-        m3.metric("深夜合計", format_hours(total_night_h))
+        m1.metric("支給額合計", f"{int(df['給料'].sum()):,}円")
+        m2.metric("労働合計", format_hours(df['労働(h)'].sum()))
+        m3.metric("深夜合計", format_hours(df['深夜(h)'].sum()))
         m4.metric("手当日合計", format_hours(total_prem_h))
 
-        # 表示用にHH:MMに変換
+        # 表示用の加工
         df_disp = df.copy()
         df_disp['労働'] = df_disp['労働(h)'].apply(format_hours)
         df_disp['深夜'] = df_disp['深夜(h)'].apply(format_hours)
         
+        # 不要な列を隠してエディタ表示
+        cols_to_show = [c for c in df_disp.columns if c not in ['労働(h)', '深夜(h)', 'row_idx']]
         edited_df = st.data_editor(
-            df_disp.drop(columns=['労働(h)', '深夜(h)']), 
-            column_config={"選択": st.column_config.CheckboxColumn(required=True), "row_idx": None},
-            disabled=[col for col in df_disp.columns if col != "選択"],
+            df_disp[cols_to_show], 
+            column_config={"選択": st.column_config.CheckboxColumn(required=True)},
+            disabled=[col for col in cols_to_show if col != "選択"],
             hide_index=True, key="cur_edt"
         )
         
-        if not edited_df[edited_df["選択"]].empty:
-            if st.button("🗑️ 選択した行を削除", type="primary"):
-                for r in sorted(edited_df[edited_df["選択"]]["row_idx"].tolist(), reverse=True): sheet.delete_rows(r)
+        if st.button("🗑️ 選択した行を削除", type="primary"):
+            selected_indices = edited_df[edited_df["選択"]].index
+            if not selected_indices.empty:
+                rows_to_del = df.loc[selected_indices, 'row_idx'].tolist()
+                for r in sorted(rows_to_del, reverse=True):
+                    sheet.delete_rows(r)
                 st.rerun()
     else: st.info("データがありません。")
 
@@ -274,10 +280,13 @@ if sh_main:
             content = s.get_all_records()
             if content:
                 tdf = pd.DataFrame(content)
+                tdf.columns = [c.strip() for c in tdf.columns]
                 for c in ['給料', '労働(h)', '深夜(h)']:
                     tdf[c] = pd.to_numeric(tdf[c], errors='coerce').fillna(0)
                 
-                sum_prem = tdf[tdf['手当適用']=="Yes"]['労働(h)'].sum() if '手当適用' in tdf.columns else 0
+                # 月別一覧でも手当日合計を計算
+                sum_prem = tdf[tdf['手当適用'].astype(str).str.contains("Yes", case=False, na=False)]['労働(h)'].sum() if '手当適用' in tdf.columns else 0
+                
                 summary_data.append({
                     "月": s.title, 
                     "支給額": f"{int(tdf['給料'].sum()):,}円",
