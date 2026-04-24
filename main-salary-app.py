@@ -163,7 +163,7 @@ col_s1, col_s2, col_e1, col_e2 = st.columns(4)
 with col_s1: sh_val = st.selectbox("出勤（時）", list(range(24)), index=17)
 with col_s2: sm_val = st.selectbox("出勤（分）", list(range(60)), index=55)
 with col_e1: eh_val = st.selectbox("退勤（時）", list(range(30)), index=23)
-with col_e2: em_val = st.selectbox("退勤（分）", list(range(60)), index=52)
+with col_e2: em_val = st.selectbox("退勤（分）", list(range(60)), index=30)
 
 break_status = st.radio("休憩", ["なし", "あり"], horizontal=True)
 br_h, br_m = 0, 0
