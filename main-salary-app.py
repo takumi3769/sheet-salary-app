@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta, time
@@ -177,7 +176,7 @@ if break_status == "あり":
     br_h = col_br1.selectbox("休憩（h）", list(range(11)), index=0)
     br_m = col_br2.selectbox("休憩（m）", list(range(60)), index=25)
 
-# --- 5. 時間計算・日次プレビュー ---
+# --- 5. 時間計算・日次計算 ---
 start_dt = datetime.combine(d, time(sh_val, sm_val))
 if eh_val >= 24:
     end_dt = datetime.combine(d + timedelta(days=1), time(eh_val - 24, em_val))
@@ -198,26 +197,21 @@ while curr < end_dt:
 actual_h = round(actual_min / 60, 3)
 night_h = round(night_min / 60, 3)
 
-# 【日次プレビュー計算】その日単体の目安金額を表示
+# 日次目安（プレビュー）
 day_b_pay = ceil_10(actual_h * st.session_state.hourly_wage)
 day_n_prem = math.ceil(night_h * st.session_state.hourly_wage * 0.25)
 day_e_allow = math.ceil(actual_h * 50) if apply_premium else 0
 day_total = day_b_pay + day_n_prem + day_e_allow
 
 st.divider()
-# ここでその日1日の合計金額を表示（画像image_b225f7.pngの形式を維持）
-st.metric("計算結果 (合計支給額)", f"{int(day_total):,} 円", f"{format_hours(actual_h)} 労働")
-
-# 詳細内訳も表示
-with st.expander("本日分の内訳詳細"):
-    st.write(f"基本給: {day_b_pay:,}円 / 深夜割増: {day_n_prem:,}円 / 手当: {day_e_allow:,}円")
+# 計算結果のメイン表示
+st.metric("計算結果 (合計支給額)", f"{int(day_total):,} 円", f"↑ {format_hours(actual_h)} 労働")
 
 # --- 6. 保存処理 ---
 if st.button("💾 スプレッドシートに保存"):
     if sh_main:
         sheet = get_worksheet(sh_main, target_month)
         break_str = f"{br_h}h {br_m}m" if break_status == "あり" else "なし"
-        # 金額列には「日次の計算値」を参考として保存
         new_row = [
             d.strftime('%Y-%m-%d'), f"{sh_val:02d}:{sm_val:02d}", f"{eh_val:02d}:{em_val:02d}", 
             break_str, actual_h, night_h, day_b_pay, day_n_prem, day_e_allow, day_total,
@@ -228,7 +222,7 @@ if st.button("💾 スプレッドシートに保存"):
         st.success("保存しました！")
         st.rerun()
 
-# --- 7. 履歴詳細 (月合計時間からの一括計算) ---
+# --- 7. 履歴詳細 (月合計時間からの再計算) ---
 st.divider()
 st.subheader(f"📊 {target_month} の履歴詳細")
 if sh_main:
@@ -240,18 +234,18 @@ if sh_main:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-        # 月合計時間の算出
+        # 合計時間の算出
         total_work_h = df['労働(h)'].sum()
         total_night_h = df['深夜(h)'].sum()
         premium_work_h = df[df['手当適用'] == 'Yes']['労働(h)'].sum() if '手当適用' in df.columns else 0
 
-        # 月合計時間に対して一括計算（会社方式）
+        # 月合計に対する一括計算
         sum_base = ceil_10(total_work_h * st.session_state.hourly_wage)
         sum_night = math.ceil(total_night_h * st.session_state.hourly_wage * 0.25)
         sum_allow = math.ceil(premium_work_h * 50)
         final_total = sum_base + sum_night + sum_allow
 
-        # メトリクス表示（画像image_b28b94.pngの形式）
+        # メトリクス表示
         m1, m2, m3, m4, m5 = st.columns(5)
         m1.metric("支給額合計", f"{int(final_total):,}円")
         m2.metric("基本給計", f"{int(sum_base):,}円")
@@ -259,16 +253,14 @@ if sh_main:
         m4.metric("深夜合計", format_hours(total_night_h))
         m5.metric("土日祝合計", format_hours(premium_work_h))
 
-        # 履歴テーブル表示
+        # 履歴テーブル
         df_disp = df.copy()
         df_disp['row_idx'] = [i + 2 for i in range(len(df))]
         df_disp.insert(0, "選択", False)
         df_disp['労働'] = df_disp['労働(h)'].apply(format_hours)
         df_disp['深夜'] = df_disp['深夜(h)'].apply(format_hours)
         
-        # テーブルには保存された日次の金額を表示（目安として）
         cols_to_show = ["選択", "日付", "出勤", "退勤", "労働", "深夜", "給料合計", "手当適用"]
-        # 列が存在するか確認して表示
         actual_cols = [c for c in cols_to_show if c in df_disp.columns]
         st.data_editor(df_disp[actual_cols], hide_index=True, key="cur_edt")
         
@@ -297,10 +289,9 @@ if sh_main:
                 tn = pd.to_numeric(tdf['深夜(h)'], errors='coerce').sum()
                 tp = tdf[tdf['手当適用'] == 'Yes']['労働(h)'].astype(float).sum()
                 
-                # 一括計算適用
-                total = ceil_10(tw * st.session_state.hourly_wage) + \
-                        math.ceil(tn * st.session_state.hourly_wage * 0.25) + \
-                        math.ceil(tp * 50)
-                summary.append({"月": s.title, "支給額": f"{int(total):,}円"})
+                m_total = ceil_10(tw * st.session_state.hourly_wage) + \
+                          math.ceil(tn * st.session_state.hourly_wage * 0.25) + \
+                          math.ceil(tp * 50)
+                summary.append({"月": s.title, "支給額": f"{int(m_total):,}円"})
     if summary:
         st.dataframe(pd.DataFrame(summary).sort_values("月", ascending=False), hide_index=True, use_container_width=True)
