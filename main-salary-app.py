@@ -58,6 +58,11 @@ def floor_delta(x, decimals=3):
     multiplier = 10 ** decimals
     return math.floor(round(x, 9) * multiplier) / multiplier
 
+def round_10(x):
+    """【基本給用】1円の位を四捨五入して10円単位にする"""
+    # 例: 71,024円 → 71,020円 / 71,025円 → 71,030円
+    return int(round((x + 0.000001) / 10) * 10)
+
 # --- 3. 画面設定 & CSS ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="wide")
 
@@ -253,7 +258,7 @@ if sh_main:
         total_prem_h = floor_delta(total_min_prem / 60.0, 3)
 
         # 3. 給料一括計算【すべて四捨五入】
-        final_base_pay = round_nearest(st.session_state.hourly_wage * total_work_h)
+        final_base_pay = round_10(st.session_state.hourly_wage * total_work_h)
         # 深夜の単価計算も端数を丸めてから掛ける
         night_unit = round(st.session_state.hourly_wage * 0.25, 5)
         final_night_pay = round_nearest(night_unit * total_night_h)
