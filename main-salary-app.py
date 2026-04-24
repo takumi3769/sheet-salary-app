@@ -228,14 +228,21 @@ if sh_main:
         df = pd.DataFrame(data)
         df.columns = [c.strip() for c in df.columns]
         
-        numeric_cols = ['給料合計', '労働(h)', '深夜(h)', '基本給(10円切上)', '深夜割増', '手当分']
+        col_name = '給料合計' if '給料合計' in df.columns else '給料'
+        numeric_cols = [col_name, '労働(h)', '深夜(h)', '基本給(10円切上)', '深夜割増', '手当分']
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
+        # メトリクス表示部分（修正済み：変な文字が出ないようにif文を分離）
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("支給額合計", f"{int(df['給料合計'].sum()):,}円")
-        m2.metric("基本給(10円切上)計", f"{int(df['基本給(10円切上)'].sum()):,}円") if '基本給(10円切上)' in df.columns else None
+        m1.metric("支給額合計", f"{int(df[col_name].sum()):,}円")
+        
+        if '基本給(10円切上)' in df.columns:
+            m2.metric("基本給(10円切上)計", f"{int(df['基本給(10円切上)'].sum()):,}円")
+        else:
+            m2.metric("基本給", "データなし")
+            
         m3.metric("労働合計", format_hours(df['労働(h)'].sum()))
         m4.metric("深夜合計", format_hours(df['深夜(h)'].sum()))
 
