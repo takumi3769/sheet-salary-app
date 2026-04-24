@@ -60,6 +60,13 @@ st.markdown("""
     [data-testid="stElementToolbar"] {
         display: none;
     }
+
+    /* メインエリア内の2つ目以降の divider よりも後にあるメトリクスだけを小さくする */
+    /* あるいは、もっと確実に「履歴詳細」のセクションだけを狙う場合 */
+    [data-testid="stVerticalBlock"] > div:nth-last-child(-n+5) [data-testid="stMetricValue"] {
+        font-size: 1.6rem !important;
+    }
+    
      /* --- 1. アプリ全体の基本設定 --- */
     .stApp { background-color: #E0F2F7 !important; }
 
