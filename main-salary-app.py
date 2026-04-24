@@ -41,31 +41,80 @@ def format_hours(hours_float):
 # --- 3. 画面基本設定 & カスタムCSS ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
+# CSS: 表の上のツールバー（虫眼鏡、ダウンロード等）を非表示にする
 st.markdown("""
     <style>
-    [data-testid="stElementToolbar"] { display: none; }
-    /* 背景色 */
+    [data-testid="stElementToolbar"] {
+        display: none;
+    }
+     /* --- 1. アプリ全体の基本設定 --- */
     .stApp { background-color: #E0F2F7 !important; }
-    /* 文字色を黒に統一 */
+
+    /* 文字全般 */
     h1, h2, h3, p, label, .stMarkdown { color: #000000 !important; }
     
-    /* サイドバー設定 */
-    [data-testid="stSidebar"] { background-color: #FFEB3B !important; background-image: none !important; }
-    [data-testid="stSidebar"] div[data-baseweb="input"] { background-color: #FFFFFF !important; border: none !important; }
+    /* --- 2. サイドバーの設定（枠なし・黄色背景） --- */
+    [data-testid="stSidebar"] {
+        background-color: #FFEB3B !important;
+        background-image: none !important;
+    }
+
+    /* サイドバーの入力ボックス（枠を完全に消去） */
+    [data-testid="stSidebar"] div[data-baseweb="input"],
+    [data-testid="stSidebar"] div[data-baseweb="base-input"],
+    [data-testid="stSidebar"] div[data-baseweb="input"] > div {
+        background-color: #FFFFFF !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    [data-testid="stSidebar"] input {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+        border: none !important;
+    }
+
+    /* ＋ーボタンの色分け */
+    [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] {
+        border: none !important;
+        margin: 0 !important;
+        opacity: 1 !important;
+    }
     [data-testid="stSidebar"] button[data-testid="stNumberInputStepDown"] { background-color: #007BFF !important; }
     [data-testid="stSidebar"] button[data-testid="stNumberInputStepUp"] { background-color: #FF4B4B !important; }
-    
-    /* メインエリア入力欄 */
-    [data-testid="stMain"] * { color: #000000 !important; }
-    [data-testid="stMain"] div[data-baseweb="input"], 
-    [data-testid="stMain"] div[data-baseweb="select"] > div { 
-        background-color: #FFFFFF !important; 
-        border: none !important; 
-        box-shadow: none !important;
-        border-radius: 4px !important; 
+    [data-testid="stSidebar"] button[data-testid^="stNumberInputStep"] svg { fill: #FFFFFF !important; }
+
+    /* --- 3. メインエリアの設定（枠なし・白床・黒文字） --- */
+    /* 全文字を黒に固定 */
+    [data-testid="stMain"] * {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
     }
-    
-    /* ボタンデザイン */
+
+    /* 全ての入力ボックス・セレクトボックスの枠線を消す */
+    [data-testid="stMain"] div[data-baseweb="input"],
+    [data-testid="stMain"] div[data-baseweb="base-input"],
+    [data-testid="stMain"] div[data-baseweb="input"] > div,
+    [data-testid="stMain"] div[data-baseweb="select"] > div {
+        background-color: #FFFFFF !important;
+        border: none !important; /* メインの外枠も削除 */
+        box-shadow: none !important; /* 影も削除 */
+        border-radius: 4px !important;
+    }
+
+    /* 入力欄そのものの枠も消す */
+    [data-testid="stMain"] input {
+        border: none !important;
+        background-color: transparent !important;
+    }
+
+    /* セレクトボックスの矢印アイコンを黒に */
+    [data-testid="stMain"] svg {
+        fill: #000000 !important;
+    }
+
+    /* --- 4. ボタン設定 --- */
+    /* 「保存」ボタン（枠ありでボタンらしく見せる場合） */
     [data-testid="stMain"] div.stButton > button {
         background-color: #D3D3D3 !important;
         color: #000000 !important;
@@ -73,7 +122,6 @@ st.markdown("""
     }
     </style>
     """, unsafe_allow_html=True)
-
 if 'hourly_wage' not in st.session_state:
     st.session_state.hourly_wage = 1200
 
