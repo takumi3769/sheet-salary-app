@@ -54,6 +54,11 @@ def ceil_10(x):
 def ceil_1(x):
     return math.ceil(x)
 
+def floor_delta(x, decimals=3):
+    """小数点第4位を切り捨て (第3位まで残す)"""
+    multiplier = 10 ** decimals
+    return math.floor(x * multiplier) / multiplier
+
 # --- 3. 画面設定 & CSS ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
@@ -198,18 +203,25 @@ def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage, has_premium):
         if 22 <= curr.hour or curr.hour < 5: night_minutes += 1
         curr += timedelta(minutes=1)
     
-    b_pay = ceil_10((base_wage * actual_work_min) / 60.0)
-    n_prem = ceil_1((base_wage * 0.25 * night_minutes) / 60.0)
-    e_allow = ceil_1((50 * actual_work_min / 60.0)) if has_premium else 0
+    # 休憩時間を深夜から引く簡易的な調整（必要に応じてロジックを詳細化可能）
+    # ここでは深夜帯に休憩をとったものとして、労働時間の比率で案分せず実働から計算
+    actual_work_h = floor_delta(actual_work_min / 60.0)
+    night_work_h = floor_delta(night_minutes / 60.0)
     
-    return round(actual_work_min/60, 3), round(night_minutes/60, 3), b_pay, n_prem, e_allow, (b_pay + n_prem + e_allow)
+    # 各金額計算（繰り上げルールは維持）
+    b_pay = ceil_10(base_wage * actual_work_h)
+    n_prem = ceil_1(base_wage * 0.25 * night_work_h)
+    e_allow = ceil_1(50 * actual_work_h) if has_premium else 0
+    
+    total_s = b_pay + n_prem + e_allow
+    
+    return actual_work_h, night_work_h, b_pay, n_prem, e_allow, total_s
 
 actual_h, night_h, b_pay, n_prem, e_allow, total_s = calculate_salary(
     d, sh_val, sm_val, eh_val, em_val, br_h, br_m, st.session_state.hourly_wage, apply_premium
 )
 
 st.divider()
-# --- 計算結果の表示（内訳を完全分離） ---
 st.subheader("💰 今回の計算結果")
 c1, c2, c3, c4, c5 = st.columns(5)
 c1.metric("合計支給額", f"{total_s:,} 円")
@@ -252,7 +264,6 @@ if sh_main:
         if '手当適用' in df.columns and '労働(h)' in df.columns:
             holiday_work_total = df[df['手当適用'] == 'Yes']['労働(h)'].sum()
 
-        # 履歴詳細の集計メトリクス
         m1, m2, m3, m4, m5, m6 = st.columns(6)
         m1.metric("支給額合計", f"{int(df[col_name].sum()):,}円")
         m2.metric("基本給計", f"{int(df['基本給(10円切上)'].sum()):,}円")
@@ -285,7 +296,8 @@ st.divider()
 st.subheader("📅 月別収入一覧")
 if sh_main:
     summary = []
-    for s in sh_main.worksheets():
+    worksheets = sh_main.worksheets()
+    for s in worksheets:
         if "-" in s.title:
             content = s.get_all_records()
             if content:
