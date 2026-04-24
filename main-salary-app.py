@@ -54,6 +54,9 @@ def ceil_10(x):
 def ceil_1(x):
     return math.ceil(x)
 
+# --- 3. 画面設定 & CSS ---
+st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
+
 # CSS: 表の上のツールバー（虫眼鏡、ダウンロード等）を非表示にする
 st.markdown("""
     <style>
@@ -143,9 +146,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. 画面設定 ---
-st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
-
 if 'hourly_wage' not in st.session_state:
     st.session_state.hourly_wage = 1200
 
@@ -195,7 +195,7 @@ def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage, has_premium):
     night_minutes = 0
     curr = start_dt
     while curr < end_dt:
-        if curr.hour >= 22 or curr.hour < 5: night_minutes += 1
+        if 22 <= curr.hour or curr.hour < 5: night_minutes += 1
         curr += timedelta(minutes=1)
     
     b_pay = ceil_10((base_wage * actual_work_min) / 60.0)
@@ -209,7 +209,13 @@ actual_h, night_h, b_pay, n_prem, e_allow, total_s = calculate_salary(
 )
 
 st.divider()
-st.metric("計算結果 (合計支給額)", f"{total_s:,} 円", f"{format_hours(actual_h)} 労働")
+# --- 計算結果の表示（内訳付き） ---
+st.subheader("💰 今回の計算結果")
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("合計支給額", f"{total_s:,} 円")
+c2.metric("労働時間", format_hours(actual_h))
+c3.metric("内: 深夜割増", f"{n_prem:,} 円", f"{format_hours(night_h)}")
+c4.metric("内: 手当分", f"{e_allow:,} 円")
 
 # --- 6. 保存処理 ---
 if st.button("💾 スプレッドシートに保存"):
@@ -241,23 +247,17 @@ if sh_main:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-        # 土日祝手当が適用された時間の合計を計算
         holiday_work_total = 0
         if '手当適用' in df.columns and '労働(h)' in df.columns:
             holiday_work_total = df[df['手当適用'] == 'Yes']['労働(h)'].sum()
 
-        # メトリクス表示部分
+        # 履歴詳細のメトリクス（内訳を表示）
         m1, m2, m3, m4, m5 = st.columns(5)
         m1.metric("支給額合計", f"{int(df[col_name].sum()):,}円")
-        
-        if '基本給(10円切上)' in df.columns:
-            m2.metric("基本給計", f"{int(df['基本給(10円切上)'].sum()):,}円")
-        else:
-            m2.metric("基本給", "データなし")
-            
-        m3.metric("労働合計", format_hours(df['労働(h)'].sum()))
-        m4.metric("深夜合計", format_hours(df['深夜(h)'].sum()))
-        m5.metric("土日祝合計", format_hours(holiday_work_total)) # 追加項目
+        m2.metric("深夜割増計", f"{int(df['深夜割増'].sum()):,}円")
+        m3.metric("手当合計", f"{int(df['手当分'].sum()):,}円")
+        m4.metric("労働合計", format_hours(df['労働(h)'].sum()))
+        m5.metric("土日祝合計", format_hours(holiday_work_total))
 
         df_disp = df.copy()
         df_disp['row_idx'] = [i + 2 for i in range(len(df))]
