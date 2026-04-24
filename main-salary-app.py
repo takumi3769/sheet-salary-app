@@ -39,7 +39,7 @@ def get_worksheet(sh, month_str):
         worksheet.append_row(header)
         return worksheet
 
-# --- 2. 補助関数（時間表示の正確な変換） ---
+# --- 2. 補助関数 ---
 def format_hours(hours_float):
     if pd.isna(hours_float) or hours_float <= 0: return "0:00"
     total_minutes = int(round(hours_float * 60))
@@ -47,7 +47,7 @@ def format_hours(hours_float):
     minutes = total_minutes % 60
     return f"{hours}:{minutes:02d}"
 
-# --- 3. 画面基本設定 ---
+# --- 3. 画面設定 ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
 
 # CSS: 表の上のツールバー（虫眼鏡、ダウンロード等）を非表示にする
@@ -142,7 +142,7 @@ with st.sidebar:
 st.title("💰 給料管理システム")
 sh_main = init_spreadsheet_service()
 
-# --- 4. 勤務入力 ---
+# --- 4. 勤務入力（横並びレイアウト） ---
 st.subheader("📅 勤務情報の入力")
 d = st.date_input("日付を選択", datetime.now())
 target_month = d.strftime('%Y-%m')
@@ -157,12 +157,15 @@ if apply_premium:
     base_wage_today += 50
     st.info(f"✨ 手当適用日：ベース時給 {base_wage_today}円")
 
-col_start, col_end = st.columns(2)
-with col_start:
+# 出勤・退勤の時分を横並びに配置
+col_s1, col_s2, col_e1, col_e2 = st.columns(4)
+with col_s1:
     sh_val = st.selectbox("出勤（時）", list(range(24)), index=17)
+with col_s2:
     sm_val = st.selectbox("出勤（分）", list(range(60)), index=55)
-with col_end:
+with col_e1:
     eh_val = st.selectbox("退勤（時）", list(range(30)), index=23)
+with col_e2:
     em_val = st.selectbox("退勤（分）", list(range(60)), index=52)
 
 break_status = st.radio("休憩", ["なし", "あり"], horizontal=True)
@@ -172,7 +175,7 @@ if break_status == "あり":
     br_h = col_br1.selectbox("休憩（h）", list(range(11)), index=0)
     br_m = col_br2.selectbox("休憩（m）", list(range(60)), index=25)
 
-# --- 5. 計算ロジック（1分単位の精密計算） ---
+# --- 5. 計算ロジック（深夜から休憩を引かない精密方式） ---
 def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage):
     start_dt = datetime.combine(d, time(sh, sm))
     if eh >= 24:
@@ -196,7 +199,6 @@ def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage):
         total_minutes += 1
         curr += timedelta(minutes=1)
     
-    # 休憩分を基本給からマイナス（深夜カウントは減らさない）
     break_total_min = (bh * 60) + bm
     total_salary_float -= (base_wage * break_total_min) / 60.0
     
@@ -239,7 +241,7 @@ if sh_main:
         df['row_idx'] = [i + 2 for i in range(len(df))]
         df.insert(0, "選択", False)
         
-        # 手当計の正確な集計
+        # 手当計の正確な集計（Yesを正確に判定）
         total_prem_h = 0
         if '手当適用' in df.columns:
             total_prem_h = df[df['手当適用'].astype(str).str.upper().str.contains("YES", na=False)]['労働(h)'].sum()
