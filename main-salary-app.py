@@ -238,7 +238,7 @@ if sh_main:
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("支給額合計", f"{int(df[col_name].sum()):,}円")
         
-        if '基本給' in df.columns:
+        if '基本給(10円切上)' in df.columns:
             m2.metric("基本給計", f"{int(df['基本給(10円切上)'].sum()):,}円")
         else:
             m2.metric("基本給", "データなし")
