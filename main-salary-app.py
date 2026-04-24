@@ -44,18 +44,14 @@ def get_worksheet(sh, month_str):
 def format_hours_from_min(total_minutes):
     """分（整数または小数）を '時:分' 形式に変換"""
     if pd.isna(total_minutes) or total_minutes <= 0: return "0:00"
-    total_min_int = int(round(total_minutes))
+    total_min_int = int(round(total_minutes + 0.000001))
     hours = total_min_int // 60
     minutes = total_min_int % 60
     return f"{hours}:{minutes:02d}"
 
-def ceil_10(x):
-    """10円単位切り上げ"""
-    return math.ceil(round(x, 5) / 10) * 10
-
-def ceil_1(x):
-    """1円単位切り上げ"""
-    return math.ceil(round(x, 5))
+def round_nearest(x):
+    """【全項目共通】四捨五入して整数にする（1円単位）"""
+    return int(round(x + 0.000001))
 
 def floor_delta(x, decimals=3):
     """小数点第4位を切り捨て（第3位まで残す）"""
@@ -185,7 +181,7 @@ if break_status == "あり":
     br_h = col_br1.selectbox("休憩（h）", list(range(11)), index=0)
     br_m = col_br2.selectbox("休憩（m）", list(range(60)), index=25)
 
-# 計算処理
+# 時間計算
 start_dt = datetime.combine(d, time(sh_val, sm_val))
 if eh_val >= 24:
     end_dt = datetime.combine(d + timedelta(days=1), time(eh_val - 24, em_val))
@@ -193,7 +189,7 @@ else:
     end_dt = datetime.combine(d, time(eh_val, em_val))
     if end_dt <= start_dt: end_dt += timedelta(days=1)
 
-# 分単位で算出（整数）
+# 分単位で算出
 work_min = int(round((end_dt - start_dt).total_seconds() / 60 - (br_h * 60 + br_m)))
 night_min = 0
 curr = start_dt
@@ -201,12 +197,12 @@ while curr < end_dt:
     if 22 <= curr.hour or curr.hour < 5: night_min += 1
     curr += timedelta(minutes=1)
 
-# 入力確認用の計算（表示用）
+# 保存前の表示用計算（すべて四捨五入）
 disp_work_h = floor_delta(work_min / 60.0, 3)
 disp_night_h = floor_delta(night_min / 60.0, 3)
-disp_b_pay = ceil_10(st.session_state.hourly_wage * disp_work_h)
-disp_n_prem = ceil_1(st.session_state.hourly_wage * 0.25 * disp_night_h)
-disp_allow = ceil_1(50 * disp_work_h) if apply_premium else 0
+disp_b_pay = round_nearest(st.session_state.hourly_wage * disp_work_h)
+disp_n_prem = round_nearest(st.session_state.hourly_wage * 0.25 * disp_night_h)
+disp_allow = round_nearest(50 * disp_work_h) if apply_premium else 0
 disp_total = disp_b_pay + disp_n_prem + disp_allow
 
 st.divider()
@@ -240,16 +236,13 @@ if sh_main:
         df = pd.DataFrame(data)
         df.columns = [c.strip() for c in df.columns]
         
-        # 読み込み時に数値を「分」として扱う（既存の(h)列という名前でも中身は分として処理）
-        for col in ['労働(分)', '深夜(分)', '労働(h)', '深夜(h)']:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-
-        # 列名の揺れを吸収（保存時の列名に合わせて調整）
+        # 読み込み時に「分」を数値化
         w_col = '労働(分)' if '労働(分)' in df.columns else '労働(h)'
         n_col = '深夜(分)' if '深夜(分)' in df.columns else '深夜(h)'
+        for col in [w_col, n_col]:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-        # 1. 整数である「分」を合計する（誤差ゼロ）
+        # 1. 整数である「分」を合計
         total_min_work = df[w_col].sum()
         total_min_night = df[n_col].sum()
         total_min_prem = df[df['手当適用'] == 'Yes'][w_col].sum() if '手当適用' in df.columns else 0
@@ -259,10 +252,13 @@ if sh_main:
         total_night_h = floor_delta(total_min_night / 60.0, 3)
         total_prem_h = floor_delta(total_min_prem / 60.0, 3)
 
-        # 3. 給料一括計算
-        final_base_pay = ceil_10(st.session_state.hourly_wage * total_work_h)
-        final_night_pay = ceil_1(round(st.session_state.hourly_wage * 0.25, 5) * total_night_h)
-        final_allowance_pay = ceil_1(50 * total_prem_h)
+        # 3. 給料一括計算【すべて四捨五入】
+        final_base_pay = round_nearest(st.session_state.hourly_wage * total_work_h)
+        # 深夜の単価計算も端数を丸めてから掛ける
+        night_unit = round(st.session_state.hourly_wage * 0.25, 5)
+        final_night_pay = round_nearest(night_unit * total_night_h)
+        final_allowance_pay = round_nearest(50 * total_prem_h)
+        
         final_total_pay = final_base_pay + final_night_pay + final_allowance_pay
 
         # メトリクス表示
@@ -275,7 +271,7 @@ if sh_main:
         m6.metric("深夜合計", format_hours_from_min(total_min_night))
         m7.metric("土日祝合計", format_hours_from_min(total_min_prem))
 
-        # テーブル表示用
+        # テーブル表示
         df_disp = df.copy()
         df_disp['row_idx'] = [i + 2 for i in range(len(df))]
         df_disp.insert(0, "選択", False)
@@ -314,9 +310,9 @@ if sh_main:
                 s_night_h = floor_delta(tdf[n_c].sum() / 60.0, 3)
                 s_prem_h = floor_delta(tdf[tdf['手当適用'] == 'Yes'][w_c].sum() / 60.0, 3) if '手当適用' in tdf.columns else 0.0
                 
-                m_total = ceil_10(st.session_state.hourly_wage * s_work_h) + \
-                          ceil_1(round(st.session_state.hourly_wage * 0.25, 5) * s_night_h) + \
-                          ceil_1(50 * s_prem_h)
+                m_total = round_nearest(st.session_state.hourly_wage * s_work_h) + \
+                          round_nearest(round(st.session_state.hourly_wage * 0.25, 5) * s_night_h) + \
+                          round_nearest(50 * s_prem_h)
                 summary.append({"月": s.title, "支給額": f"{int(m_total):,}円"})
     if summary:
         st.dataframe(pd.DataFrame(summary).sort_values("月", ascending=False), hide_index=True, use_container_width=True)
