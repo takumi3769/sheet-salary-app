@@ -49,17 +49,10 @@ def format_hours(hours_float):
     return f"{hours}:{minutes:02d}"
 
 def ceil_10(x):
-    if x <= 0: return 0
-    # 10円単位切り上げ（ごく微小な計算誤差をroundで丸めてから判定）
-    return math.ceil(round(x, 1) / 10) * 10
+    return math.ceil(x / 10) * 10
 
 def ceil_1(x):
-    if x <= 0: return 0
-    # 1円単位切り上げ（小数点第3位で丸めてから繰り上げ）
-    return math.ceil(round(x, 3))
-
-# --- 3. 画面設定 ---
-st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
+    return math.ceil(x)
 
 # CSS: 表の上のツールバー（虫眼鏡、ダウンロード等）を非表示にする
 st.markdown("""
@@ -150,6 +143,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# --- 3. 画面設定 ---
+st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
+
 if 'hourly_wage' not in st.session_state:
     st.session_state.hourly_wage = 1200
 
@@ -183,32 +179,37 @@ if break_status == "あり":
     br_h = col_br1.selectbox("休憩（h）", list(range(11)), index=0)
     br_m = col_br2.selectbox("休憩（m）", list(range(60)), index=25)
 
-# --- 5. 時間計算 ---
-start_dt = datetime.combine(d, time(sh_val, sm_val))
-if eh_val >= 24:
-    end_dt = datetime.combine(d + timedelta(days=1), time(eh_val - 24, em_val))
-else:
-    end_dt = datetime.combine(d, time(eh_val, em_val))
-    if end_dt <= start_dt: end_dt += timedelta(days=1)
+# --- 5. 計算ロジック ---
+def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage, has_premium):
+    start_dt = datetime.combine(d, time(sh, sm))
+    if eh >= 24:
+        end_dt = datetime.combine(d + timedelta(days=1), time(eh - 24, em))
+    else:
+        end_dt = datetime.combine(d, time(eh, em))
+        if end_dt <= start_dt: end_dt += timedelta(days=1)
+    
+    total_minutes = (end_dt - start_dt).total_seconds() / 60
+    break_total_min = (bh * 60) + bm
+    actual_work_min = max(0, total_minutes - break_total_min)
+    
+    night_minutes = 0
+    curr = start_dt
+    while curr < end_dt:
+        if curr.hour >= 22 or curr.hour < 5: night_minutes += 1
+        curr += timedelta(minutes=1)
+    
+    b_pay = ceil_10((base_wage * actual_work_min) / 60.0)
+    n_prem = ceil_1((base_wage * 0.25 * night_minutes) / 60.0)
+    e_allow = ceil_1((50 * actual_work_min / 60.0)) if has_premium else 0
+    
+    return round(actual_work_min/60, 3), round(night_minutes/60, 3), b_pay, n_prem, e_allow, (b_pay + n_prem + e_allow)
 
-actual_min = (end_dt - start_dt).total_seconds() / 60 - ((br_h * 60) + br_m)
-actual_h = round(max(0, actual_min / 60), 4)
-
-night_min = 0
-curr = start_dt
-while curr < end_dt:
-    if curr.hour >= 22 or curr.hour < 5: night_min += 1
-    curr += timedelta(minutes=1)
-night_h = round(night_min / 60, 4)
-
-# 本日の目安
-day_b_pay = ceil_10(actual_h * st.session_state.hourly_wage)
-day_n_prem = ceil_1(night_h * (st.session_state.hourly_wage * 0.25))
-day_e_allow = ceil_1(actual_h * 50) if apply_premium else 0
-day_total = day_b_pay + day_n_prem + day_e_allow
+actual_h, night_h, b_pay, n_prem, e_allow, total_s = calculate_salary(
+    d, sh_val, sm_val, eh_val, em_val, br_h, br_m, st.session_state.hourly_wage, apply_premium
+)
 
 st.divider()
-st.metric("計算結果 (合計支給額目安)", f"{int(day_total):,} 円", f"↑ {format_hours(actual_h)} 労働")
+st.metric("計算結果 (合計支給額)", f"{total_s:,} 円", f"{format_hours(actual_h)} 労働")
 
 # --- 6. 保存処理 ---
 if st.button("💾 スプレッドシートに保存"):
@@ -217,7 +218,7 @@ if st.button("💾 スプレッドシートに保存"):
         break_str = f"{br_h}h {br_m}m" if break_status == "あり" else "なし"
         new_row = [
             d.strftime('%Y-%m-%d'), f"{sh_val:02d}:{sm_val:02d}", f"{eh_val:02d}:{em_val:02d}", 
-            break_str, actual_h, night_h, day_b_pay, day_n_prem, day_e_allow, day_total,
+            break_str, actual_h, night_h, b_pay, n_prem, e_allow, total_s,
             "Yes" if apply_premium else "No"
         ]
         sheet.append_row(new_row)
@@ -225,7 +226,7 @@ if st.button("💾 スプレッドシートに保存"):
         st.success("保存しました！")
         st.rerun()
 
-# --- 7. 履歴詳細 (時間単位・繰り上げ計算版) ---
+# --- 7. 履歴詳細 ---
 st.divider()
 st.subheader(f"📊 {target_month} の履歴詳細")
 if sh_main:
@@ -233,42 +234,42 @@ if sh_main:
     if data:
         df = pd.DataFrame(data)
         df.columns = [c.strip() for c in df.columns]
-        df['労働(h)'] = pd.to_numeric(df['労働(h)'], errors='coerce').fillna(0)
-        df['深夜(h)'] = pd.to_numeric(df['深夜(h)'], errors='coerce').fillna(0)
-
-        # 時間(h)を合算
-        total_work_h = df['労働(h)'].sum()
-        total_night_h = df['深夜(h)'].sum()
-        premium_work_h = df[df['手当適用'] == 'Yes']['労働(h)'].sum() if '手当適用' in df.columns else 0
-
-        # 一括繰り上げ計算
-        sum_base = ceil_10(total_work_h * st.session_state.hourly_wage)
-        sum_night = ceil_1(total_night_h * (st.session_state.hourly_wage * 0.25))
-        sum_allow = ceil_1(premium_work_h * 50)
         
-        final_total = sum_base + sum_night + sum_allow
+        col_name = '給料合計' if '給料合計' in df.columns else '給料'
+        numeric_cols = [col_name, '労働(h)', '深夜(h)', '基本給(10円切上)', '深夜割増', '手当分']
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-        # メトリクス表示
+        # 土日祝手当が適用された時間の合計を計算
+        holiday_work_total = 0
+        if '手当適用' in df.columns and '労働(h)' in df.columns:
+            holiday_work_total = df[df['手当適用'] == 'Yes']['労働(h)'].sum()
+
+        # メトリクス表示部分
         m1, m2, m3, m4, m5 = st.columns(5)
-        m1.metric("支給額合計", f"{int(final_total):,}円")
-        m2.metric("基本給計", f"{int(sum_base):,}円")
-        m3.metric("労働合計", format_hours(total_work_h))
-        m4.metric("深夜合計", format_hours(total_night_h))
-        m5.metric("土日祝合計", format_hours(premium_work_h))
+        m1.metric("支給額合計", f"{int(df[col_name].sum()):,}円")
+        
+        if '基本給(10円切上)' in df.columns:
+            m2.metric("基本給計", f"{int(df['基本給(10円切上)'].sum()):,}円")
+        else:
+            m2.metric("基本給", "データなし")
+            
+        m3.metric("労働合計", format_hours(df['労働(h)'].sum()))
+        m4.metric("深夜合計", format_hours(df['深夜(h)'].sum()))
+        m5.metric("土日祝合計", format_hours(holiday_work_total)) # 追加項目
 
-        # テーブル表示
         df_disp = df.copy()
         df_disp['row_idx'] = [i + 2 for i in range(len(df))]
         df_disp.insert(0, "選択", False)
         df_disp['労働'] = df_disp['労働(h)'].apply(format_hours)
         df_disp['深夜'] = df_disp['深夜(h)'].apply(format_hours)
         
-        cols_to_show = ["選択", "日付", "出勤", "退勤", "労働", "深夜", "手当適用"]
-        actual_cols = [c for c in cols_to_show if c in df_disp.columns]
-        st.data_editor(df_disp[actual_cols], hide_index=True, key="cur_edt")
+        cols_to_show = [c for c in df_disp.columns if c not in ['労働(h)', '深夜(h)', 'row_idx']]
+        edited_df = st.data_editor(df_disp[cols_to_show], hide_index=True, key="cur_edt")
         
         if st.button("🗑️ 選択した行を削除", type="primary"):
-            selected_indices = st.session_state.cur_edt[st.session_state.cur_edt["選択"]].index
+            selected_indices = edited_df[edited_df["選択"]].index
             if not selected_indices.empty:
                 ws = get_worksheet(sh_main, target_month)
                 for r in sorted(df_disp.loc[selected_indices, 'row_idx'].tolist(), reverse=True):
@@ -288,13 +289,8 @@ if sh_main:
             if content:
                 tdf = pd.DataFrame(content)
                 tdf.columns = [c.strip() for c in tdf.columns]
-                tw = pd.to_numeric(tdf['労働(h)'], errors='coerce').sum()
-                tn = pd.to_numeric(tdf['深夜(h)'], errors='coerce').sum()
-                tp = tdf[tdf['手当適用'] == 'Yes']['労働(h)'].astype(float).sum()
-                
-                m_t = ceil_10(tw * st.session_state.hourly_wage) + \
-                      ceil_1(tn * (st.session_state.hourly_wage * 0.25)) + \
-                      ceil_1(tp * 50)
-                summary.append({"月": s.title, "支給額": f"{int(m_t):,}円"})
+                target_col = '給料合計' if '給料合計' in tdf.columns else '給料'
+                tdf[target_col] = pd.to_numeric(tdf[target_col], errors='coerce').fillna(0)
+                summary.append({"月": s.title, "支給額": f"{int(tdf[target_col].sum()):,}円"})
     if summary:
         st.dataframe(pd.DataFrame(summary).sort_values("月", ascending=False), hide_index=True, use_container_width=True)
