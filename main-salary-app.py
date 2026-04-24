@@ -36,31 +36,31 @@ def get_worksheet(sh, month_str):
         return sh.worksheet(month_str)
     except gspread.exceptions.WorksheetNotFound:
         worksheet = sh.add_worksheet(title=month_str, rows="100", cols="12")
-        header = ["日付", "出勤", "退勤", "休憩時間", "労働(h)", "深夜(h)", "基本給(10円切上)", "深夜割増", "手当分", "給料合計", "手当適用"]
+        header = ["日付", "出勤", "退勤", "休憩時間", "労働(分)", "深夜(分)", "基本給", "深夜割増", "手当分", "給料合計", "手当適用"]
         worksheet.append_row(header)
         return worksheet
 
 # --- 2. 補助関数 ---
-def format_hours(hours_float):
-    if pd.isna(hours_float) or hours_float <= 0: return "0:00"
-    # 0.0001分以下のゴミを排除してから時間に直す
-    total_minutes = int(round(round(hours_float, 8) * 60))
-    hours = total_minutes // 60
-    minutes = total_minutes % 60
+def format_hours_from_min(total_minutes):
+    """分（整数または小数）を '時:分' 形式に変換"""
+    if pd.isna(total_minutes) or total_minutes <= 0: return "0:00"
+    total_min_int = int(round(total_minutes))
+    hours = total_min_int // 60
+    minutes = total_min_int % 60
     return f"{hours}:{minutes:02d}"
 
 def ceil_10(x):
-    """10円単位切り上げ（超微細な誤差をroundで消してから計算）"""
+    """10円単位切り上げ"""
     return math.ceil(round(x, 5) / 10) * 10
 
 def ceil_1(x):
-    """1円単位切り上げ（超微細な誤差をroundで消してから計算）"""
+    """1円単位切り上げ"""
     return math.ceil(round(x, 5))
 
 def floor_delta(x, decimals=3):
-    """小数点第4位を切り捨て"""
+    """小数点第4位を切り捨て（第3位まで残す）"""
     multiplier = 10 ** decimals
-    return math.floor(round(x, 8) * multiplier) / multiplier
+    return math.floor(round(x, 9) * multiplier) / multiplier
 
 # --- 3. 画面設定 & CSS ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="wide")
@@ -164,7 +164,7 @@ with st.sidebar:
 st.title("💰 給料管理システム")
 sh_main = init_spreadsheet_service()
 
-# --- 4. 勤務入力 ---
+# --- 4. 勤務入力 & 5. 計算ロジック ---
 st.subheader("📅 勤務情報の入力")
 d = st.date_input("日付を選択", datetime.now())
 target_month = d.strftime('%Y-%m')
@@ -185,53 +185,47 @@ if break_status == "あり":
     br_h = col_br1.selectbox("休憩（h）", list(range(11)), index=0)
     br_m = col_br2.selectbox("休憩（m）", list(range(60)), index=25)
 
-# --- 5. 計算ロジック ---
-def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage, has_premium):
-    start_dt = datetime.combine(d, time(sh, sm))
-    if eh >= 24:
-        end_dt = datetime.combine(d + timedelta(days=1), time(eh - 24, em))
-    else:
-        end_dt = datetime.combine(d, time(eh, em))
-        if end_dt <= start_dt: end_dt += timedelta(days=1)
-    
-    actual_work_min = max(0, (end_dt - start_dt).total_seconds() / 60 - (bh * 60 + bm))
-    
-    night_minutes = 0
-    curr = start_dt
-    while curr < end_dt:
-        if 22 <= curr.hour or curr.hour < 5: night_minutes += 1
-        curr += timedelta(minutes=1)
-    
-    # 時間を小数に変換（第4位切捨）
-    h_work = floor_delta(actual_work_min / 60.0)
-    h_night = floor_delta(night_minutes / 60.0)
-    
-    b_pay = ceil_10(base_wage * h_work)
-    n_prem = (base_wage * 0.25 * h_night)
-    e_allow = ceil_1(50 * h_work) if has_premium else 0
-    
-    return h_work, h_night, b_pay, n_prem, e_allow, (b_pay + n_prem + e_allow)
+# 計算処理
+start_dt = datetime.combine(d, time(sh_val, sm_val))
+if eh_val >= 24:
+    end_dt = datetime.combine(d + timedelta(days=1), time(eh_val - 24, em_val))
+else:
+    end_dt = datetime.combine(d, time(eh_val, em_val))
+    if end_dt <= start_dt: end_dt += timedelta(days=1)
 
-actual_h, night_h, b_pay, n_prem, e_allow, total_s = calculate_salary(
-    d, sh_val, sm_val, eh_val, em_val, br_h, br_m, st.session_state.hourly_wage, apply_premium
-)
+# 分単位で算出（整数）
+work_min = int(round((end_dt - start_dt).total_seconds() / 60 - (br_h * 60 + br_m)))
+night_min = 0
+curr = start_dt
+while curr < end_dt:
+    if 22 <= curr.hour or curr.hour < 5: night_min += 1
+    curr += timedelta(minutes=1)
+
+# 入力確認用の計算（表示用）
+disp_work_h = floor_delta(work_min / 60.0, 3)
+disp_night_h = floor_delta(night_min / 60.0, 3)
+disp_b_pay = ceil_10(st.session_state.hourly_wage * disp_work_h)
+disp_n_prem = ceil_1(st.session_state.hourly_wage * 0.25 * disp_night_h)
+disp_allow = ceil_1(50 * disp_work_h) if apply_premium else 0
+disp_total = disp_b_pay + disp_n_prem + disp_allow
 
 st.divider()
 st.subheader("💰 今回の計算結果")
 c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric("合計支給額", f"{total_s:,} 円")
-c2.metric("基本給分", f"{b_pay:,} 円")
-c3.metric("深夜割増分", f"{n_prem:,} 円")
-c4.metric("手当分", f"{e_allow:,} 円")
-c5.metric("労働時間", format_hours(actual_h))
+c1.metric("合計支給額", f"{disp_total:,} 円")
+c2.metric("基本給分", f"{disp_b_pay:,} 円")
+c3.metric("深夜割増分", f"{disp_n_prem:,} 円")
+c4.metric("手当分", f"{disp_allow:,} 円")
+c5.metric("労働時間", format_hours_from_min(work_min))
 
 if st.button("💾 スプレッドシートに保存"):
     if sh_main:
         sheet = get_worksheet(sh_main, target_month)
         break_str = f"{br_h}h {br_m}m" if break_status == "あり" else "なし"
+        # スプレッドシートには「分(整数)」を保存
         sheet.append_row([
             d.strftime('%Y-%m-%d'), f"{sh_val:02d}:{sm_val:02d}", f"{eh_val:02d}:{em_val:02d}", 
-            break_str, actual_h, night_h, b_pay, n_prem, e_allow, total_s, "Yes" if apply_premium else "No"
+            break_str, work_min, night_min, disp_b_pay, disp_n_prem, disp_allow, disp_total, "Yes" if apply_premium else "No"
         ])
         st.cache_data.clear()
         st.success("保存しました！")
@@ -245,28 +239,30 @@ if sh_main:
     if data:
         df = pd.DataFrame(data)
         df.columns = [c.strip() for c in df.columns]
-        for col in ['労働(h)', '深夜(h)']:
+        
+        # 読み込み時に数値を「分」として扱う（既存の(h)列という名前でも中身は分として処理）
+        for col in ['労働(分)', '深夜(分)', '労働(h)', '深夜(h)']:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-        # 【超・厳格化】
-        # 合計した直後に round(x, 5) をして 0.00001 以下の浮動小数点ゴミを完全に削除
-        # これにより、13.00000000001 のような値が 13.0 に修正されます
-        total_work_h = round(df['労働(h)'].sum(), 5)
-        total_night_h = round(df['深夜(h)'].sum(), 5)
-        
-        if '手当適用' in df.columns:
-            total_prem_h = round(df[df['手当適用'] == 'Yes']['労働(h)'].sum(), 5)
-        else:
-            total_prem_h = 0.0
+        # 列名の揺れを吸収（保存時の列名に合わせて調整）
+        w_col = '労働(分)' if '労働(分)' in df.columns else '労働(h)'
+        n_col = '深夜(分)' if '深夜(分)' in df.columns else '深夜(h)'
 
-        # 月間一括計算
+        # 1. 整数である「分」を合計する（誤差ゼロ）
+        total_min_work = df[w_col].sum()
+        total_min_night = df[n_col].sum()
+        total_min_prem = df[df['手当適用'] == 'Yes'][w_col].sum() if '手当適用' in df.columns else 0
+
+        # 2. 合計分を時間に直し、小数点第4位を切り捨て
+        total_work_h = floor_delta(total_min_work / 60.0, 3)
+        total_night_h = floor_delta(total_min_night / 60.0, 3)
+        total_prem_h = floor_delta(total_min_prem / 60.0, 3)
+
+        # 3. 給料一括計算
         final_base_pay = ceil_10(st.session_state.hourly_wage * total_work_h)
-        # 時給×0.25の単価計算でもroundを挟み、時間にゴミが混ざるのを防ぐ
         final_night_pay = ceil_1(round(st.session_state.hourly_wage * 0.25, 5) * total_night_h)
         final_allowance_pay = ceil_1(50 * total_prem_h)
-        
-        # 支給額合計
         final_total_pay = final_base_pay + final_night_pay + final_allowance_pay
 
         # メトリクス表示
@@ -275,17 +271,17 @@ if sh_main:
         m2.metric("基本給計", f"{final_base_pay:,}円")
         m3.metric("深夜割増計", f"{final_night_pay:,}円")
         m4.metric("手当合計", f"{final_allowance_pay:,}円")
-        m5.metric("労働合計", format_hours(total_work_h))
-        m6.metric("深夜合計", format_hours(total_night_h))
-        m7.metric("土日祝合計", format_hours(total_prem_h))
+        m5.metric("労働合計", format_hours_from_min(total_min_work))
+        m6.metric("深夜合計", format_hours_from_min(total_min_night))
+        m7.metric("土日祝合計", format_hours_from_min(total_min_prem))
 
-        # テーブル表示
+        # テーブル表示用
         df_disp = df.copy()
         df_disp['row_idx'] = [i + 2 for i in range(len(df))]
         df_disp.insert(0, "選択", False)
-        df_disp['労働'] = df_disp['労働(h)'].apply(format_hours)
-        df_disp['深夜'] = df_disp['深夜(h)'].apply(format_hours)
-        cols_to_show = [c for c in df_disp.columns if c not in ['労働(h)', '深夜(h)', 'row_idx']]
+        df_disp['労働'] = df_disp[w_col].apply(format_hours_from_min)
+        df_disp['深夜'] = df_disp[n_col].apply(format_hours_from_min)
+        cols_to_show = [c for c in df_disp.columns if c not in [w_col, n_col, 'row_idx']]
         edited_df = st.data_editor(df_disp[cols_to_show], hide_index=True, key="cur_edt")
         
         if st.button("🗑️ 選択した行を削除", type="primary"):
@@ -309,17 +305,18 @@ if sh_main:
             if content:
                 tdf = pd.DataFrame(content)
                 tdf.columns = [c.strip() for c in tdf.columns]
-                for c in ['労働(h)', '深夜(h)']:
-                    if c in tdf.columns: tdf[c] = pd.to_numeric(tdf[c], errors='coerce').fillna(0)
+                w_c = '労働(分)' if '労働(分)' in tdf.columns else '労働(h)'
+                n_c = '深夜(分)' if '深夜(分)' in tdf.columns else '深夜(h)'
+                for c in [w_c, n_c]:
+                    tdf[c] = pd.to_numeric(tdf[c], errors='coerce').fillna(0)
                 
-                # 月別一覧でも一括計算ロジック
-                s_work = round(tdf['労働(h)'].sum(), 5)
-                s_night = round(tdf['深夜(h)'].sum(), 5)
-                s_prem = round(tdf[tdf['手当適用'] == 'Yes']['労働(h)'].sum(), 5) if '手当適用' in tdf.columns else 0.0
+                s_work_h = floor_delta(tdf[w_c].sum() / 60.0, 3)
+                s_night_h = floor_delta(tdf[n_c].sum() / 60.0, 3)
+                s_prem_h = floor_delta(tdf[tdf['手当適用'] == 'Yes'][w_c].sum() / 60.0, 3) if '手当適用' in tdf.columns else 0.0
                 
-                m_total = ceil_10(st.session_state.hourly_wage * s_work) + \
-                          ceil_1(round(st.session_state.hourly_wage * 0.25, 5) * s_night) + \
-                          ceil_1(50 * s_prem)
+                m_total = ceil_10(st.session_state.hourly_wage * s_work_h) + \
+                          ceil_1(round(st.session_state.hourly_wage * 0.25, 5) * s_night_h) + \
+                          ceil_1(50 * s_prem_h)
                 summary.append({"月": s.title, "支給額": f"{int(m_total):,}円"})
     if summary:
         st.dataframe(pd.DataFrame(summary).sort_values("月", ascending=False), hide_index=True, use_container_width=True)
