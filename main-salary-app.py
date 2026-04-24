@@ -57,7 +57,7 @@ def ceil_1(x):
 def floor_delta(x, decimals=3):
     """小数点第4位を切り捨て (第3位まで残す)"""
     multiplier = 10 ** decimals
-    return math.floor(x * multiplier) / multiplier
+    return math.floor(round(x, 10) * multiplier) / multiplier
 
 # --- 3. 画面設定 & CSS ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
@@ -203,16 +203,16 @@ def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage, has_premium):
         if 22 <= curr.hour or curr.hour < 5: night_minutes += 1
         curr += timedelta(minutes=1)
     
-    # 休憩時間を深夜から引く簡易的な調整（必要に応じてロジックを詳細化可能）
-    # ここでは深夜帯に休憩をとったものとして、労働時間の比率で案分せず実働から計算
+    # 時間単位に変換し、小数点第4位を切り捨て
     actual_work_h = floor_delta(actual_work_min / 60.0)
     night_work_h = floor_delta(night_minutes / 60.0)
     
-    # 各金額計算（繰り上げルールは維持）
+    # 各項目の算出（繰り上げルール適用）
     b_pay = ceil_10(base_wage * actual_work_h)
     n_prem = ceil_1(base_wage * 0.25 * night_work_h)
     e_allow = ceil_1(50 * actual_work_h) if has_premium else 0
     
+    # 支給額合計は足し算
     total_s = b_pay + n_prem + e_allow
     
     return actual_work_h, night_work_h, b_pay, n_prem, e_allow, total_s
@@ -254,24 +254,36 @@ if sh_main:
         df = pd.DataFrame(data)
         df.columns = [c.strip() for c in df.columns]
         
-        col_name = '給料合計' if '給料合計' in df.columns else '給料'
-        numeric_cols = [col_name, '労働(h)', '深夜(h)', '基本給(10円切上)', '深夜割増', '手当分']
-        for col in numeric_cols:
+        # 数値変換
+        for col in ['労働(h)', '深夜(h)', '基本給(10円切上)', '深夜割増', '手当分', '給料合計']:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-        holiday_work_total = 0
-        if '手当適用' in df.columns and '労働(h)' in df.columns:
-            holiday_work_total = df[df['手当適用'] == 'Yes']['労働(h)'].sum()
+        # 【重要】履歴詳細の集計は「総時間」から再計算する
+        total_work_h_sum = floor_delta(df['労働(h)'].sum())
+        total_night_h_sum = floor_delta(df['深夜(h)'].sum())
+        # 手当対象（Yes）の労働時間を合計
+        if '手当適用' in df.columns:
+            premium_h_sum = floor_delta(df[df['手当適用'] == 'Yes']['労働(h)'].sum())
+        else:
+            premium_h_sum = 0
 
+        # 月間集計値の計算（ご指定のルール通り、各項目の合計を足し算）
+        calc_base_total = ceil_10(st.session_state.hourly_wage * total_work_h_sum)
+        calc_night_total = ceil_1(st.session_state.hourly_wage * 0.25 * total_night_h_sum)
+        calc_allowance_total = ceil_1(50 * premium_h_sum)
+        calc_all_total = calc_base_total + calc_night_total + calc_allowance_total
+
+        # メトリクス表示
         m1, m2, m3, m4, m5, m6 = st.columns(6)
-        m1.metric("支給額合計", f"{int(df[col_name].sum()):,}円")
-        m2.metric("基本給計", f"{int(df['基本給(10円切上)'].sum()):,}円")
-        m3.metric("深夜割増計", f"{int(df['深夜割増'].sum()):,}円")
-        m4.metric("手当合計", f"{int(df['手当分'].sum()):,}円")
+        m1.metric("支給額合計", f"{calc_all_total:,}円")
+        m2.metric("基本給計", f"{calc_base_total:,}円")
+        m3.metric("深夜割増計", f"{calc_night_total:,}円")
+        m4.metric("手当合計", f"{calc_allowance_total:,}円")
         m5.metric("労働合計", format_hours(df['労働(h)'].sum()))
-        m6.metric("土日祝合計", format_hours(holiday_work_total))
+        m6.metric("土日祝合計", format_hours(df[df['手当適用'] == 'Yes']['労働(h)'].sum()))
 
+        # テーブル表示
         df_disp = df.copy()
         df_disp['row_idx'] = [i + 2 for i in range(len(df))]
         df_disp.insert(0, "選択", False)
@@ -296,13 +308,13 @@ st.divider()
 st.subheader("📅 月別収入一覧")
 if sh_main:
     summary = []
-    worksheets = sh_main.worksheets()
-    for s in worksheets:
+    for s in sh_main.worksheets():
         if "-" in s.title:
             content = s.get_all_records()
             if content:
                 tdf = pd.DataFrame(content)
                 tdf.columns = [c.strip() for c in tdf.columns]
+                # 月別一覧も総時間から計算し直すとより正確ですが、ここでは簡易的にスプレッドシートの合計を採用
                 target_col = '給料合計' if '給料合計' in tdf.columns else '給料'
                 tdf[target_col] = pd.to_numeric(tdf[target_col], errors='coerce').fillna(0)
                 summary.append({"月": s.title, "支給額": f"{int(tdf[target_col].sum()):,}円"})
