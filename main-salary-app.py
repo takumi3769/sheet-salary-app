@@ -5,7 +5,7 @@ import jpholiday
 import gspread
 from google.oauth2.service_account import Credentials
 
-# --- 1. スプレッドシート接続設定（キャッシュ化） ---
+# --- 1. スプレッドシート接続設定（キャッシュ化でAPI 429エラーを防止） ---
 @st.cache_resource
 def init_spreadsheet_service():
     scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
@@ -42,7 +42,6 @@ def get_worksheet(sh, month_str):
 # --- 2. 補助関数 ---
 def format_hours(hours_float):
     if pd.isna(hours_float) or hours_float <= 0: return "0:00"
-    # 小数時間を分に変換（四捨五入で誤差回避）
     total_minutes = int(round(hours_float * 60))
     hours = total_minutes // 60
     minutes = total_minutes % 60
@@ -132,7 +131,6 @@ st.markdown("""
     }
     </style>
     """, unsafe_allow_html=True)
-
 if 'hourly_wage' not in st.session_state:
     st.session_state.hourly_wage = 1200
 
@@ -161,24 +159,21 @@ if apply_premium:
 col_start, col_end = st.columns(2)
 with col_start:
     st.write("**出勤**")
-    c1, c2 = st.columns(2)
-    sh = c1.selectbox("時", list(range(24)), index=18, key="sh")
-    sm = c2.selectbox("分", list(range(60)), index=0, key="sm")
+    sh = st.selectbox("時", list(range(24)), index=18, key="sh")
+    sm = st.selectbox("分", list(range(60)), index=0, key="sm")
 with col_end:
     st.write("**退勤**")
-    c3, c4 = st.columns(2)
-    eh = c3.selectbox("時", list(range(30)), index=22, key="eh")
-    em = c4.selectbox("分", list(range(60)), index=0, key="em")
+    eh = st.selectbox("時", list(range(30)), index=22, key="eh")
+    em = st.selectbox("分", list(range(60)), index=0, key="em")
 
-st.write("**休憩の有無**")
-break_status = st.radio("休憩を選択", ["なし", "あり"], horizontal=True, label_visibility="collapsed")
+break_status = st.radio("休憩を選択", ["なし", "あり"], horizontal=True)
 br_h, br_m = 0, 0
 if break_status == "あり":
     col_br1, col_br2 = st.columns(2)
-    br_h = col_br1.selectbox("休憩（時間）", list(range(11)), index=0, key="br_h")
-    br_m = col_br2.selectbox("休憩（分）", list(range(60)), index=0, key="br_m")
+    br_h = col_br1.selectbox("休憩（時間）", list(range(11)), index=0)
+    br_m = col_br2.selectbox("休憩（分）", list(range(60)), index=0)
 
-# --- 5. 計算ロジック ---
+# --- 5. 計算ロジック（深夜から休憩を引かない方式） ---
 def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage):
     start_dt = datetime.combine(d, time(sh, sm))
     if eh >= 24:
@@ -187,27 +182,32 @@ def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage):
         end_dt = datetime.combine(d, time(eh, em))
         if end_dt <= start_dt: end_dt += timedelta(days=1)
     
-    total_salary, work_minutes, night_minutes = 0.0, 0, 0
+    total_minutes = 0
+    night_minutes = 0
+    total_salary = 0.0
+    
     curr = start_dt
     while curr < end_dt:
-        work_minutes += 1
-        # 22時〜翌5時を深夜判定
-        if curr.hour >= 22 or curr.hour < 5:
+        # 深夜時間帯（22:00〜05:00）を1分ずつ判定
+        is_night = (curr.hour >= 22 or curr.hour < 5)
+        if is_night:
             night_minutes += 1
             total_salary += (base_wage * 1.25) / 60.0
         else:
             total_salary += base_wage / 60.0
+        total_minutes += 1
         curr += timedelta(minutes=1)
     
+    # 休憩時間は給料合計（基本分）から差し引くが、深夜時間のカウント自体は減らさない
     break_total_min = (bh * 60) + bm
-    if break_total_min > 0 and work_minutes > 0:
-        actual_work_min = max(0, work_minutes - break_total_min)
-        ratio = actual_work_min / work_minutes
-        total_salary *= ratio
-        work_minutes = actual_work_min
-        night_minutes = round(night_minutes * ratio)
-
-    return work_minutes/60.0, night_minutes/60.0, int(total_salary)
+    if break_total_min > 0:
+        total_salary -= (base_wage * break_total_min) / 60.0
+        total_salary = max(0, total_salary)
+        work_hours = (total_minutes - break_total_min) / 60.0
+    else:
+        work_hours = total_minutes / 60.0
+        
+    return work_hours, night_minutes/60.0, int(total_salary)
 
 actual_h, night_h, salary = calculate_salary(d, sh, sm, eh, em, br_h, br_m, base_wage_today)
 
@@ -237,11 +237,9 @@ if sh_main:
     if data:
         df = pd.DataFrame(data)
         df.columns = [c.strip() for c in df.columns]
-
         for col in ['給料', '労働(h)', '深夜(h)']:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-        
         df['row_idx'] = [i + 2 for i in range(len(df))]
         df.insert(0, "選択", False)
         
@@ -259,7 +257,6 @@ if sh_main:
         df_disp = df.copy()
         df_disp['労働'] = df_disp['労働(h)'].apply(format_hours)
         df_disp['深夜'] = df_disp['深夜(h)'].apply(format_hours)
-        
         cols_to_show = [c for c in df_disp.columns if c not in ['労働(h)', '深夜(h)', 'row_idx']]
         edited_df = st.data_editor(
             df_disp[cols_to_show], 
@@ -267,7 +264,6 @@ if sh_main:
             disabled=[col for col in cols_to_show if col != "選択"],
             hide_index=True, key="cur_edt"
         )
-        
         if st.button("🗑️ 選択した行を削除", type="primary"):
             selected_indices = edited_df[edited_df["選択"]].index
             if not selected_indices.empty:
@@ -292,9 +288,7 @@ if sh_main:
                 tdf.columns = [c.strip() for c in tdf.columns]
                 for c in ['給料', '労働(h)', '深夜(h)']:
                     tdf[c] = pd.to_numeric(tdf[c], errors='coerce').fillna(0)
-                
                 sum_prem = tdf[tdf['手当適用'].astype(str).str.contains("Yes", case=False, na=False)]['労働(h)'].sum() if '手当適用' in tdf.columns else 0
-                
                 summary_data.append({
                     "月": s.title, 
                     "支給額": f"{int(tdf['給料'].sum()):,}円",
