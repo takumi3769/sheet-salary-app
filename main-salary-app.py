@@ -43,20 +43,20 @@ def get_worksheet(sh, month_str):
 # --- 2. 補助関数 ---
 def format_hours(hours_float):
     if pd.isna(hours_float) or hours_float <= 0: return "0:00"
-    total_seconds = int(round(hours_float * 3600))
-    hours = total_seconds // 3600
-    minutes = (total_seconds % 3600) // 60
+    total_minutes = int(round(hours_float * 60))
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
     return f"{hours}:{minutes:02d}"
 
 def ceil_10(x):
     if x <= 0: return 0
-    # 10円単位切り上げ（1円未満を四捨五入して微小な誤差を消してから判定）
-    return math.ceil(round(x, 0) / 10) * 10
+    # 10円単位切り上げ（ごく微小な計算誤差をroundで丸めてから判定）
+    return math.ceil(round(x, 1) / 10) * 10
 
 def ceil_1(x):
     if x <= 0: return 0
-    # 1円単位切り上げ（0.01円未満を四捨五入して、計算誤差による誤切り上げを防止）
-    return math.ceil(round(x, 2))
+    # 1円単位切り上げ（小数点第3位で丸めてから繰り上げ）
+    return math.ceil(round(x, 3))
 
 # --- 3. 画面設定 ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="centered")
@@ -191,20 +191,20 @@ else:
     end_dt = datetime.combine(d, time(eh_val, em_val))
     if end_dt <= start_dt: end_dt += timedelta(days=1)
 
-actual_sec = max(0, (end_dt - start_dt).total_seconds() - ((br_h * 3600) + (br_m * 60)))
-night_sec = 0
+actual_min = (end_dt - start_dt).total_seconds() / 60 - ((br_h * 60) + br_m)
+actual_h = round(max(0, actual_min / 60), 4)
+
+night_min = 0
 curr = start_dt
 while curr < end_dt:
-    if curr.hour >= 22 or curr.hour < 5: night_sec += 60
+    if curr.hour >= 22 or curr.hour < 5: night_min += 1
     curr += timedelta(minutes=1)
-
-actual_h = round(actual_sec / 3600, 4)
-night_h = round(night_sec / 3600, 4)
+night_h = round(night_min / 60, 4)
 
 # 本日の目安
-day_b_pay = ceil_10((actual_sec * st.session_state.hourly_wage) / 3600)
-day_n_prem = ceil_1((night_sec * (st.session_state.hourly_wage * 0.25)) / 3600)
-day_e_allow = ceil_1((actual_sec * 50) / 3600) if apply_premium else 0
+day_b_pay = ceil_10(actual_h * st.session_state.hourly_wage)
+day_n_prem = ceil_1(night_h * (st.session_state.hourly_wage * 0.25))
+day_e_allow = ceil_1(actual_h * 50) if apply_premium else 0
 day_total = day_b_pay + day_n_prem + day_e_allow
 
 st.divider()
@@ -225,7 +225,7 @@ if st.button("💾 スプレッドシートに保存"):
         st.success("保存しました！")
         st.rerun()
 
-# --- 7. 履歴詳細 (秒単位・精密切り上げ版) ---
+# --- 7. 履歴詳細 (時間単位・繰り上げ計算版) ---
 st.divider()
 st.subheader(f"📊 {target_month} の履歴詳細")
 if sh_main:
@@ -236,15 +236,15 @@ if sh_main:
         df['労働(h)'] = pd.to_numeric(df['労働(h)'], errors='coerce').fillna(0)
         df['深夜(h)'] = pd.to_numeric(df['深夜(h)'], errors='coerce').fillna(0)
 
-        # 秒単位で集計
-        total_w_sec = round(df['労働(h)'].sum() * 3600)
-        total_n_sec = round(df['深夜(h)'].sum() * 3600)
-        premium_w_sec = round(df[df['手当適用'] == 'Yes']['労働(h)'].sum() * 3600) if '手当適用' in df.columns else 0
+        # 時間(h)を合算
+        total_work_h = df['労働(h)'].sum()
+        total_night_h = df['深夜(h)'].sum()
+        premium_work_h = df[df['手当適用'] == 'Yes']['労働(h)'].sum() if '手当適用' in df.columns else 0
 
-        # 一括計算（秒単価で計算）
-        sum_base = ceil_10((total_w_sec * st.session_state.hourly_wage) / 3600)
-        sum_night = ceil_1((total_n_sec * (st.session_state.hourly_wage * 0.25)) / 3600)
-        sum_allow = ceil_1((premium_w_sec * 50) / 3600)
+        # 一括繰り上げ計算
+        sum_base = ceil_10(total_work_h * st.session_state.hourly_wage)
+        sum_night = ceil_1(total_night_h * (st.session_state.hourly_wage * 0.25))
+        sum_allow = ceil_1(premium_work_h * 50)
         
         final_total = sum_base + sum_night + sum_allow
 
@@ -252,9 +252,9 @@ if sh_main:
         m1, m2, m3, m4, m5 = st.columns(5)
         m1.metric("支給額合計", f"{int(final_total):,}円")
         m2.metric("基本給計", f"{int(sum_base):,}円")
-        m3.metric("労働合計", format_hours(total_w_sec / 3600))
-        m4.metric("深夜合計", format_hours(total_n_sec / 3600))
-        m5.metric("土日祝合計", format_hours(premium_w_sec / 3600))
+        m3.metric("労働合計", format_hours(total_work_h))
+        m4.metric("深夜合計", format_hours(total_night_h))
+        m5.metric("土日祝合計", format_hours(premium_work_h))
 
         # テーブル表示
         df_disp = df.copy()
@@ -288,13 +288,13 @@ if sh_main:
             if content:
                 tdf = pd.DataFrame(content)
                 tdf.columns = [c.strip() for c in tdf.columns]
-                w_s = round(pd.to_numeric(tdf['労働(h)'], errors='coerce').sum() * 3600)
-                n_s = round(pd.to_numeric(tdf['深夜(h)'], errors='coerce').sum() * 3600)
-                p_s = round(tdf[tdf['手当適用'] == 'Yes']['労働(h)'].astype(float).sum() * 3600)
+                tw = pd.to_numeric(tdf['労働(h)'], errors='coerce').sum()
+                tn = pd.to_numeric(tdf['深夜(h)'], errors='coerce').sum()
+                tp = tdf[tdf['手当適用'] == 'Yes']['労働(h)'].astype(float).sum()
                 
-                m_t = ceil_10((w_s * st.session_state.hourly_wage) / 3600) + \
-                      ceil_1((n_s * (st.session_state.hourly_wage * 0.25)) / 3600) + \
-                      ceil_1((p_s * 50) / 3600)
+                m_t = ceil_10(tw * st.session_state.hourly_wage) + \
+                      ceil_1(tn * (st.session_state.hourly_wage * 0.25)) + \
+                      ceil_1(tp * 50)
                 summary.append({"月": s.title, "支給額": f"{int(m_t):,}円"})
     if summary:
         st.dataframe(pd.DataFrame(summary).sort_values("月", ascending=False), hide_index=True, use_container_width=True)
