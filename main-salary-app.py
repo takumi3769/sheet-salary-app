@@ -43,24 +43,24 @@ def get_worksheet(sh, month_str):
 # --- 2. 補助関数 ---
 def format_hours(hours_float):
     if pd.isna(hours_float) or hours_float <= 0: return "0:00"
-    # 0.5秒分（約0.008分）の誤差を吸収して丸める
-    total_minutes = int(round(round(hours_float, 10) * 60))
+    # 0.0001分以下のゴミを排除してから時間に直す
+    total_minutes = int(round(round(hours_float, 8) * 60))
     hours = total_minutes // 60
     minutes = total_minutes % 60
     return f"{hours}:{minutes:02d}"
 
 def ceil_10(x):
-    """10円単位切り上げ（誤差対策込）"""
-    return math.ceil(round(x, 7) / 10) * 10
+    """10円単位切り上げ（超微細な誤差をroundで消してから計算）"""
+    return math.ceil(round(x, 5) / 10) * 10
 
 def ceil_1(x):
-    """1円単位切り上げ（誤差対策込）"""
-    return math.ceil(round(x, 7))
+    """1円単位切り上げ（超微細な誤差をroundで消してから計算）"""
+    return math.ceil(round(x, 5))
 
 def floor_delta(x, decimals=3):
     """小数点第4位を切り捨て"""
     multiplier = 10 ** decimals
-    return math.floor(round(x, 9) * multiplier) / multiplier
+    return math.floor(round(x, 8) * multiplier) / multiplier
 
 # --- 3. 画面設定 & CSS ---
 st.set_page_config(page_title="給料管理", page_icon="💰", layout="wide")
@@ -202,6 +202,7 @@ def calculate_salary(d, sh, sm, eh, em, bh, bm, base_wage, has_premium):
         if 22 <= curr.hour or curr.hour < 5: night_minutes += 1
         curr += timedelta(minutes=1)
     
+    # 時間を小数に変換（第4位切捨）
     h_work = floor_delta(actual_work_min / 60.0)
     h_night = floor_delta(night_minutes / 60.0)
     
@@ -248,21 +249,24 @@ if sh_main:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-        # 【超厳格化】合計を出した後、小数点第3位に丸めて誤差(0.0000001等)を完全に消し去る
-        total_work_h = round(df['労働(h)'].sum(), 3)
-        total_night_h = round(df['深夜(h)'].sum(), 3)
+        # 【超・厳格化】
+        # 合計した直後に round(x, 5) をして 0.00001 以下の浮動小数点ゴミを完全に削除
+        # これにより、13.00000000001 のような値が 13.0 に修正されます
+        total_work_h = round(df['労働(h)'].sum(), 5)
+        total_night_h = round(df['深夜(h)'].sum(), 5)
         
         if '手当適用' in df.columns:
-            total_prem_h = round(df[df['手当適用'] == 'Yes']['労働(h)'].sum(), 3)
+            total_prem_h = round(df[df['手当適用'] == 'Yes']['労働(h)'].sum(), 5)
         else:
             total_prem_h = 0.0
 
-        # 一括計算
+        # 月間一括計算
         final_base_pay = ceil_10(st.session_state.hourly_wage * total_work_h)
-        final_night_pay = ceil_1(st.session_state.hourly_wage * 0.25 * total_night_h)
+        # 時給×0.25の単価計算でもroundを挟み、時間にゴミが混ざるのを防ぐ
+        final_night_pay = ceil_1(round(st.session_state.hourly_wage * 0.25, 5) * total_night_h)
         final_allowance_pay = ceil_1(50 * total_prem_h)
         
-        # 支給額合計は一括計算された3項目の単純合算
+        # 支給額合計
         final_total_pay = final_base_pay + final_night_pay + final_allowance_pay
 
         # メトリクス表示
@@ -309,12 +313,12 @@ if sh_main:
                     if c in tdf.columns: tdf[c] = pd.to_numeric(tdf[c], errors='coerce').fillna(0)
                 
                 # 月別一覧でも一括計算ロジック
-                s_work = round(tdf['労働(h)'].sum(), 3)
-                s_night = round(tdf['深夜(h)'].sum(), 3)
-                s_prem = round(tdf[tdf['手当適用'] == 'Yes']['労働(h)'].sum(), 3) if '手当適用' in tdf.columns else 0.0
+                s_work = round(tdf['労働(h)'].sum(), 5)
+                s_night = round(tdf['深夜(h)'].sum(), 5)
+                s_prem = round(tdf[tdf['手当適用'] == 'Yes']['労働(h)'].sum(), 5) if '手当適用' in tdf.columns else 0.0
                 
                 m_total = ceil_10(st.session_state.hourly_wage * s_work) + \
-                          ceil_1(st.session_state.hourly_wage * 0.25 * s_night) + \
+                          ceil_1(round(st.session_state.hourly_wage * 0.25, 5) * s_night) + \
                           ceil_1(50 * s_prem)
                 summary.append({"月": s.title, "支給額": f"{int(m_total):,}円"})
     if summary:
