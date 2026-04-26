@@ -60,7 +60,6 @@ def floor_delta(x, decimals=3):
 
 def round_10(x):
     """【基本給用】1円の位を四捨五入して10円単位にする"""
-    # 例: 71,024円 → 71,020円 / 71,025円 → 71,030円
     return int(round((x + 0.000001) / 10) * 10)
 
 # --- 3. 画面設定 & CSS ---
@@ -155,6 +154,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+
 if 'hourly_wage' not in st.session_state:
     st.session_state.hourly_wage = 1200
 
@@ -194,7 +194,6 @@ else:
     end_dt = datetime.combine(d, time(eh_val, em_val))
     if end_dt <= start_dt: end_dt += timedelta(days=1)
 
-# 分単位で算出
 work_min = int(round((end_dt - start_dt).total_seconds() / 60 - (br_h * 60 + br_m)))
 night_min = 0
 curr = start_dt
@@ -202,7 +201,6 @@ while curr < end_dt:
     if 22 <= curr.hour or curr.hour < 5: night_min += 1
     curr += timedelta(minutes=1)
 
-# 保存前の表示用計算（すべて四捨五入）
 disp_work_h = floor_delta(work_min / 60.0, 3)
 disp_night_h = floor_delta(night_min / 60.0, 3)
 disp_b_pay = round_nearest(st.session_state.hourly_wage * disp_work_h)
@@ -223,46 +221,12 @@ if st.button("💾 スプレッドシートに保存"):
     if sh_main:
         sheet = get_worksheet(sh_main, target_month)
         break_str = f"{br_h}h {br_m}m" if break_status == "あり" else "なし"
-        # スプレッドシートには「分(整数)」を保存
         sheet.append_row([
             d.strftime('%Y-%m-%d'), f"{sh_val:02d}:{sm_val:02d}", f"{eh_val:02d}:{em_val:02d}", 
             break_str, work_min, night_min, disp_b_pay, disp_n_prem, disp_allow, disp_total, "Yes" if apply_premium else "No"
         ])
         st.cache_data.clear()
         st.success("保存しました！")
-        st.rerun()
-
-
-        # 2. 【追加】「月別サマリー」シートに月ごとの合計額を上書き保存
-        try:
-            # 「月別サマリー」という名前のシートを取得、なければ作成
-            try:
-                summary_ws = sh_main.worksheet("月別サマリー")
-            except gspread.exceptions.WorksheetNotFound:
-                summary_ws = sh_main.add_worksheet(title="月別サマリー", rows="100", cols="2")
-                summary_ws.append_row(["月", "支給額"])
-
-            # 現時点でのその月の全データを取得して再計算（最新の合計を出す）
-            month_data = sheet.get_all_records()
-            tdf = pd.DataFrame(month_data)
-            # ... (中略：既存の計算ロジックを使って final_total_pay を算出) ...
-            # ここでは簡単のため、現在の計算結果 disp_total を加算するのではなく、
-            # 保存後のシート全体から算出した「確定合計額」を書き込むのが正確です。
-            
-            # 月別サマリーシート内の該当する月を探す
-            cell = summary_ws.find(target_month)
-            if cell:
-                # すでに月があれば、その横の列（B列）の金額を更新（上書き）
-                summary_ws.update_cell(cell.row, 2, f"{final_total_pay}")
-            else:
-                # なければ新しく行を追加
-                summary_ws.append_row([target_month, final_total_pay])
-                
-        except Exception as e:
-            st.error(f"サマリー保存エラー: {e}")
-
-        st.cache_data.clear()
-        st.success(f"{target_month} のデータを保存・更新しました！")
         st.rerun()
 
 # --- 7. 履歴詳細 ---
@@ -274,32 +238,25 @@ if sh_main:
         df = pd.DataFrame(data)
         df.columns = [c.strip() for c in df.columns]
         
-        # 読み込み時に「分」を数値化
         w_col = '労働(分)' if '労働(分)' in df.columns else '労働(h)'
         n_col = '深夜(分)' if '深夜(分)' in df.columns else '深夜(h)'
         for col in [w_col, n_col]:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-        # 1. 整数である「分」を合計
         total_min_work = df[w_col].sum()
         total_min_night = df[n_col].sum()
         total_min_prem = df[df['手当適用'] == 'Yes'][w_col].sum() if '手当適用' in df.columns else 0
 
-        # 2. 合計分を時間に直し、小数点第4位を切り捨て
         total_work_h = floor_delta(total_min_work / 60.0, 3)
         total_night_h = floor_delta(total_min_night / 60.0, 3)
         total_prem_h = floor_delta(total_min_prem / 60.0, 3)
 
-        # 3. 給料一括計算【すべて四捨五入】
         final_base_pay = round_10(st.session_state.hourly_wage * total_work_h)
-        # 深夜の単価計算も端数を丸めてから掛ける
         night_unit = round(st.session_state.hourly_wage * 0.25, 5)
         final_night_pay = round_nearest(night_unit * total_night_h)
         final_allowance_pay = round_nearest(50 * total_prem_h)
-        
         final_total_pay = final_base_pay + final_night_pay + final_allowance_pay
 
-        # メトリクス表示
         m1, m2, m3, m4, m5, m6, m7 = st.columns(7)
         m1.metric("支給額合計", f"{final_total_pay:,}円")
         m2.metric("基本給計", f"{final_base_pay:,}円")
@@ -309,7 +266,6 @@ if sh_main:
         m6.metric("深夜合計", format_hours_from_min(total_min_night))
         m7.metric("土日祝合計", format_hours_from_min(total_min_prem))
 
-        # テーブル表示
         df_disp = df.copy()
         df_disp['row_idx'] = [i + 2 for i in range(len(df))]
         df_disp.insert(0, "選択", False)
@@ -344,13 +300,21 @@ if sh_main:
                 for c in [w_c, n_c]:
                     tdf[c] = pd.to_numeric(tdf[c], errors='coerce').fillna(0)
                 
-                s_work_h = floor_delta(tdf[w_c].sum() / 60.0, 3)
-                s_night_h = floor_delta(tdf[n_c].sum() / 60.0, 3)
-                s_prem_h = floor_delta(tdf[tdf['手当適用'] == 'Yes'][w_c].sum() / 60.0, 3) if '手当適用' in tdf.columns else 0.0
+                # 【履歴詳細と完全に同じ計算ロジックに統一】
+                s_min_work = tdf[w_c].sum()
+                s_min_night = tdf[n_c].sum()
+                s_min_prem = tdf[tdf['手当適用'] == 'Yes'][w_c].sum() if '手当適用' in tdf.columns else 0
                 
-                m_total = round_nearest(st.session_state.hourly_wage * s_work_h) + \
-                          round_nearest(round(st.session_state.hourly_wage * 0.25, 5) * s_night_h) + \
-                          round_nearest(50 * s_prem_h)
+                s_work_h = floor_delta(s_min_work / 60.0, 3)
+                s_night_h = floor_delta(s_min_night / 60.0, 3)
+                s_prem_h = floor_delta(s_min_prem / 60.0, 3)
+                
+                m_base = round_10(st.session_state.hourly_wage * s_work_h)
+                n_unit = round(st.session_state.hourly_wage * 0.25, 5)
+                m_night = round_nearest(n_unit * s_night_h)
+                m_allow = round_nearest(50 * s_prem_h)
+                
+                m_total = m_base + m_night + m_allow
                 summary.append({"月": s.title, "支給額": f"{int(m_total):,}円"})
     if summary:
         st.dataframe(pd.DataFrame(summary).sort_values("月", ascending=False), hide_index=True, use_container_width=True)
