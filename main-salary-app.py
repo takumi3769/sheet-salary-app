@@ -232,6 +232,39 @@ if st.button("💾 スプレッドシートに保存"):
         st.success("保存しました！")
         st.rerun()
 
+
+        # 2. 【追加】「月別サマリー」シートに月ごとの合計額を上書き保存
+        try:
+            # 「月別サマリー」という名前のシートを取得、なければ作成
+            try:
+                summary_ws = sh_main.worksheet("月別サマリー")
+            except gspread.exceptions.WorksheetNotFound:
+                summary_ws = sh_main.add_worksheet(title="月別サマリー", rows="100", cols="2")
+                summary_ws.append_row(["月", "支給額"])
+
+            # 現時点でのその月の全データを取得して再計算（最新の合計を出す）
+            month_data = sheet.get_all_records()
+            tdf = pd.DataFrame(month_data)
+            # ... (中略：既存の計算ロジックを使って final_total_pay を算出) ...
+            # ここでは簡単のため、現在の計算結果 disp_total を加算するのではなく、
+            # 保存後のシート全体から算出した「確定合計額」を書き込むのが正確です。
+            
+            # 月別サマリーシート内の該当する月を探す
+            cell = summary_ws.find(target_month)
+            if cell:
+                # すでに月があれば、その横の列（B列）の金額を更新（上書き）
+                summary_ws.update_cell(cell.row, 2, f"{final_total_pay}")
+            else:
+                # なければ新しく行を追加
+                summary_ws.append_row([target_month, final_total_pay])
+                
+        except Exception as e:
+            st.error(f"サマリー保存エラー: {e}")
+
+        st.cache_data.clear()
+        st.success(f"{target_month} のデータを保存・更新しました！")
+        st.rerun()
+
 # --- 7. 履歴詳細 ---
 st.divider()
 st.subheader(f"📊 {target_month} の履歴詳細")
